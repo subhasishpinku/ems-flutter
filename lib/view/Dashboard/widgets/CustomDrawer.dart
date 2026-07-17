@@ -2,6 +2,7 @@ import 'package:ems/Dvr/dvr_screen.dart';
 import 'package:ems/FieldSheet/fieldsheet.dart';
 import 'package:ems/Lead/leadscreen.dart';
 import 'package:ems/LeaveApplication/leaveapplication.dart';
+import 'package:ems/core/services/auth_service.dart';
 import 'package:ems/view/LoginScreen/loginscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -107,15 +108,31 @@ class CustomDrawer extends StatelessWidget {
             leading: const Icon(Icons.logout_rounded, color: Colors.red),
             title: const Text('Logout', style: TextStyle(color: Colors.red)),
             onTap: () async {
-              final prefs = await SharedPreferences.getInstance();
+              try {
+                final response = await AuthService().logout();
 
-              await prefs.clear();
+                if (response.data["status"] == "success") {
+                  final prefs = await SharedPreferences.getInstance();
 
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
+                  await prefs.clear();
+
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(response.data["message"])),
+                  );
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(e.toString())));
+              }
             },
           ),
         ],

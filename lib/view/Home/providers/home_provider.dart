@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:ems/core/services/attendance_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/location_service.dart';
 import '../services/internet_service.dart';
 
@@ -21,6 +22,7 @@ class HomeProvider extends ChangeNotifier {
   String? errorMessage;
 
   HomeProvider() {
+    _loadPunchStatus();
     _startTimeUpdater();
     _startLocationTimer();
   }
@@ -36,6 +38,18 @@ class HomeProvider extends ChangeNotifier {
     _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
       await fetchLocation();
     });
+  }
+
+  Future<void> _loadPunchStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    isPunchIn = prefs.getBool("isPunchIn") ?? false;
+
+    if (isPunchIn) {
+      startWorkTimer();
+    }
+
+    notifyListeners();
   }
 
   Future<void> fetchLocation() async {
@@ -60,11 +74,20 @@ class HomeProvider extends ChangeNotifier {
   }
 
   void startWorkTimer() {
+    if (_workTimer != null) return;
+
     _workTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       workedDuration += const Duration(seconds: 1);
       notifyListeners();
     });
   }
+
+  // void startWorkTimer() {
+  //   _workTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+  //     workedDuration += const Duration(seconds: 1);
+  //     notifyListeners();
+  //   });
+  // }
 
   void stopWorkTimer() {
     _workTimer?.cancel();
@@ -88,29 +111,190 @@ class HomeProvider extends ChangeNotifier {
         longitude: locationData!.longitude,
       );
 
-      // Response চেক করুন
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (response.data["status"] == "success") {
-          final service = FlutterBackgroundService();
-          if (!await service.isRunning()) {
-            await service.startService();
-          }
+      final status = response.data["status"]?.toString().toLowerCase() ?? "";
+      final message = response.data["message"]?.toString() ?? "";
 
-          isPunchIn = true;
-          workedDuration = Duration.zero;
-          startWorkTimer();
-          notifyListeners();
-        } else {
-          throw Exception(response.data["message"] ?? "Punch In failed");
+      // =======================
+      // Punch In Success
+      // =======================
+      if (status == "success") {
+        final prefs = await SharedPreferences.getInstance();
+
+        await prefs.setBool("isPunchIn", true);
+
+        final service = FlutterBackgroundService();
+
+        if (!await service.isRunning()) {
+          await service.startService();
         }
-      } else {
-        throw Exception("Server error: ${response.statusCode}");
+
+        isPunchIn = true;
+        workedDuration = Duration.zero;
+
+        if (_workTimer == null) {
+          startWorkTimer();
+        }
+
+        notifyListeners();
+        return;
       }
+
+      // =======================
+      // Already Punch In
+      // =======================
+      if (status == "error" &&
+          message.toLowerCase().contains("already punched in")) {
+        final prefs = await SharedPreferences.getInstance();
+
+        await prefs.setBool("isPunchIn", true);
+
+        final service = FlutterBackgroundService();
+
+        if (!await service.isRunning()) {
+          await service.startService();
+        }
+
+        isPunchIn = true;
+
+        if (_workTimer == null) {
+          startWorkTimer();
+        }
+
+        notifyListeners();
+        return;
+      }
+      // if (status == "error" &&
+      //     message.toLowerCase().contains("already punched in")) {
+      //   final prefs = await SharedPreferences.getInstance();
+
+      //   await prefs.setBool("isPunchIn", true);
+
+      //   final service = FlutterBackgroundService();
+
+      //   if (!await service.isRunning()) {
+      //     await service.startService();
+      //   }
+
+      //   isPunchIn = true;
+
+      //   if (_workTimer == null) {
+      //     startWorkTimer();
+      //   }
+
+      //   notifyListeners();
+
+      //   return;
+      // }
+
+      // =======================
+      // Other Error
+      // =======================
+      throw Exception(message);
     } catch (e) {
       print("PunchIn Error: $e");
       rethrow;
     }
   }
+
+  // Future<void> punchIn() async {
+  //   try {
+  //     if (!await checkInternet()) {
+  //       throw Exception("No Internet Connection");
+  //     }
+
+  //     await fetchLocation();
+
+  //     if (locationData == null) {
+  //       throw Exception("Location data not available");
+  //     }
+
+  //     final response = await _attendanceService.punchIn(
+  //       latitude: locationData!.latitude,
+  //       longitude: locationData!.longitude,
+  //     );
+
+  //     // Response চেক করুন
+  //     if (response.statusCode == 200 || response.statusCode == 201) {
+  //       final status = response.data["status"]?.toString().toLowerCase() ?? "";
+  //       final message = response.data["message"]?.toString() ?? "";
+
+  //       if (status == "success") {
+  //         final prefs = await SharedPreferences.getInstance();
+
+  //         await prefs.setBool("isPunchIn", true);
+
+  //         final service = FlutterBackgroundService();
+
+  //         if (!await service.isRunning()) {
+  //           await service.startService();
+  //         }
+
+  //         isPunchIn = true;
+  //         workedDuration = Duration.zero;
+
+  //         startWorkTimer();
+
+  //         notifyListeners();
+  //         return;
+  //       }
+
+  //       // Server বলছে Already punched in
+  //       if (status == "error" &&
+  //           message.toLowerCase().contains("already punched in")) {
+  //         final prefs = await SharedPreferences.getInstance();
+
+  //         await prefs.setBool("isPunchIn", true);
+
+  //         final service = FlutterBackgroundService();
+
+  //         if (!await service.isRunning()) {
+  //           await service.startService();
+  //         }
+
+  //         isPunchIn = true;
+
+  //         if (_workTimer == null) {
+  //           startWorkTimer();
+  //         }
+
+  //         notifyListeners();
+  //         return;
+  //       }
+
+  //       throw Exception(message);
+  //     } else {
+  //       throw Exception("Server error: ${response.statusCode}");
+  //     }
+  //     // if (response.statusCode == 200 || response.statusCode == 201) {
+  //     //   if (response.data["status"] == "success") {
+  //     //     final prefs = await SharedPreferences.getInstance();
+
+  //     //     await prefs.setBool("isPunchIn", true);
+
+  //     //     final service = FlutterBackgroundService();
+
+  //     //     if (!await service.isRunning()) {
+  //     //       await service.startService();
+  //     //     }
+
+  //     //     isPunchIn = true;
+
+  //     //     workedDuration = Duration.zero;
+
+  //     //     startWorkTimer();
+
+  //     //     notifyListeners();
+  //     //   } else {
+  //     //     throw Exception(response.data["message"] ?? "Punch In failed");
+  //     //   }
+  //     // } else {
+  //     //   throw Exception("Server error: ${response.statusCode}");
+  //     // }
+  //   } catch (e) {
+  //     print("PunchIn Error: $e");
+  //     rethrow;
+  //   }
+  // }
 
   Future<void> punchOut() async {
     await fetchLocation();
@@ -121,6 +305,10 @@ class HomeProvider extends ChangeNotifier {
     );
 
     if (response.data["status"] == "success") {
+      final prefs = await SharedPreferences.getInstance();
+
+      await prefs.setBool("isPunchIn", false);
+
       stopWorkTimer();
 
       final service = FlutterBackgroundService();

@@ -1,8 +1,11 @@
 import 'package:ems/LeaveApplication/addemployee_leave.dart';
+import 'package:ems/LeaveApplication/providers/leave_provider.dart';
 import 'package:ems/LeaveApplication/widgets/date_field.dart';
 import 'package:ems/LeaveApplication/widgets/dropdown_field.dart';
 import 'package:ems/LeaveApplication/widgets/leavelist_page.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class LeaveApplication extends StatefulWidget {
   const LeaveApplication({super.key});
@@ -27,8 +30,7 @@ class _LeaveApplicationState extends State<LeaveApplication> {
     );
 
     if (date != null) {
-      controller.text =
-          "${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}/${date.year}";
+      controller.text = DateFormat("yyyy-MM-dd").format(date);
     }
   }
 
@@ -67,18 +69,35 @@ class _LeaveApplicationState extends State<LeaveApplication> {
                   controller: toDate,
                   onTap: () => pickDate(toDate),
                 ),
+                Consumer<LeaveProvider>(
+                  builder: (context, provider, child) {
+                    if (provider.isLoading) {
+                      return const SizedBox(
+                        width: 250,
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
 
-                DropdownField(
-                  title: "Employee",
-                  hint: "-- All employees --",
-                  value: employee,
-                  items: const ["Rahul", "Ayan", "Rohit", "Priya"],
-                  onChanged: (v) {
-                    setState(() {
-                      employee = v;
-                    });
+                    return DropdownField(
+                      title: "Employee",
+                      hint: "-- All Employees --",
+                      value: provider.selectedEmployee?.empName,
+                      items: provider.employees.map((e) => e.empName).toList(),
+                      onChanged: provider.selectEmployee,
+                    );
                   },
                 ),
+                // DropdownField(
+                //   title: "Employee",
+                //   hint: "-- All employees --",
+                //   value: employee,
+                //   items: const ["Rahul", "Ayan", "Rohit", "Priya"],
+                //   onChanged: (v) {
+                //     setState(() {
+                //       employee = v;
+                //     });
+                //   },
+                // ),
               ],
             ),
 
@@ -109,7 +128,13 @@ class _LeaveApplicationState extends State<LeaveApplication> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xff3F73F6),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      context.read<LeaveProvider>().searchLeave(
+                        status: status ?? "",
+                        fromDate: fromDate.text,
+                        toDate: toDate.text,
+                      );
+                    },
                     child: const Text(
                       "Search",
                       style: TextStyle(color: Colors.white),

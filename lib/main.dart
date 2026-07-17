@@ -1,3 +1,4 @@
+import 'package:ems/LeaveApplication/providers/leave_provider.dart';
 import 'package:ems/core/providers/locationProvider.dart';
 import 'package:ems/core/utils/BackgroundTask/background_task.dart';
 import 'package:ems/view/ForgotPassword/Provider/forgot_password_provider.dart';
@@ -50,6 +51,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => ForgotPasswordProvider()),
         ChangeNotifierProvider(create: (_) => HomeProvider()),
+        ChangeNotifierProvider(create: (_) => LeaveProvider()..loadEmployees()),
       ],
       child: const MyApp(),
     ),

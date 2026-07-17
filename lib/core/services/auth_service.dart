@@ -1,4 +1,6 @@
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 
@@ -15,6 +17,22 @@ class AuthService {
     return await ApiClient.dio.post(
       ApiEndpoints.login,
       data: formData,
+    );
+  }
+
+  Future<Response> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    String token = prefs.getString("token") ?? "";
+
+    return await ApiClient.dio.post(
+      ApiEndpoints.logout,
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      ),
     );
   }
 }
