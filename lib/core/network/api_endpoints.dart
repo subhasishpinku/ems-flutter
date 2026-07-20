@@ -7,7 +7,7 @@ class ApiEndpoints {
   static const String forgotPassword = "auth/reset-password.php";
 
   // ================= PROFILE =================
-  static const String profile = "profile/profile.php";
+  static const String profile = "profile/index.php";
 
   // ================= DASHBOARD =================
   static const String dashboard = "dashboard/dashboard.php";
@@ -98,4 +98,7 @@ class ApiEndpoints {
 
   // ================= REPORTS =================
   static const String fieldSheetReport = "reports/field-sheet.php";
+
+  // ================= EMPLOYEE LOCATION =================
+  static const String employeeLocationCreate = "employee_location/create.php";
 }

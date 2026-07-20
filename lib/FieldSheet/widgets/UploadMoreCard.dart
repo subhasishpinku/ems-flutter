@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+// UploadMoreCard.dart
+import 'package:flutter/material.dart';
+
 class UploadMoreCard extends StatefulWidget {
   final Function(String) onSend;
   final VoidCallback onBack;
@@ -39,11 +42,11 @@ class _UploadMoreCardState extends State<UploadMoreCard> {
                   ),
                 ),
                 items: const [
-                  DropdownMenuItem(
+                  DropdownMenuItem<String>(
                     value: "Yes, add more",
                     child: Text("Yes, add more"),
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuItem<String>(
                     value: "No, continue",
                     child: Text("No, continue"),
                   ),

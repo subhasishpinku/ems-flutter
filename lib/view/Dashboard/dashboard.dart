@@ -18,8 +18,8 @@ class _MyWidgetState extends State<Dashboard> {
   int pageIndex = 0;
   final List<Widget> pages = [
     const HomeScreen(),
-    const HubScreen(),
-    const LcoScreen(),
+    // const HubScreen(),
+    // const LcoScreen(),
     const ProfileScreen(),
   ];
 

@@ -1,3 +1,4 @@
+import 'package:ems/Dvr/provider/dvr_provider.dart';
 import 'package:ems/LeaveApplication/providers/leave_provider.dart';
 import 'package:ems/core/providers/locationProvider.dart';
 import 'package:ems/core/utils/BackgroundTask/background_task.dart';
@@ -52,6 +53,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => ForgotPasswordProvider()),
         ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => LeaveProvider()..loadEmployees()),
+        ChangeNotifierProvider(create: (_) => DvrProvider()),
       ],
       child: const MyApp(),
     ),

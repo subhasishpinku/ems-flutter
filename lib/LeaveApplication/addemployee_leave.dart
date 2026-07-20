@@ -1,4 +1,7 @@
+import 'package:ems/LeaveApplication/providers/leave_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 class AddEmployeeLeave extends StatefulWidget {
   const AddEmployeeLeave({super.key});
@@ -13,7 +16,6 @@ class _AddEmployeeLeaveState extends State<AddEmployeeLeave> {
   final TextEditingController reasonController = TextEditingController();
 
   String? leaveType;
-
   Future<void> pickDate(TextEditingController controller) async {
     DateTime? pickedDate = await showDatePicker(
       context: context,
@@ -23,10 +25,23 @@ class _AddEmployeeLeaveState extends State<AddEmployeeLeave> {
     );
 
     if (pickedDate != null) {
-      controller.text =
-          "${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.year}";
+      controller.text = DateFormat("yyyy-MM-dd").format(pickedDate);
     }
   }
+
+  // Future<void> pickDate(TextEditingController controller) async {
+  //   DateTime? pickedDate = await showDatePicker(
+  //     context: context,
+  //     initialDate: DateTime.now(),
+  //     firstDate: DateTime(2024),
+  //     lastDate: DateTime(2050),
+  //   );
+
+  //   if (pickedDate != null) {
+  //     controller.text =
+  //         "${pickedDate.month.toString().padLeft(2, '0')}/${pickedDate.day.toString().padLeft(2, '0')}/${pickedDate.year}";
+  //   }
+  // }
 
   Widget title(String text) {
     return Padding(
@@ -130,16 +145,16 @@ class _AddEmployeeLeaveState extends State<AddEmployeeLeave> {
                         hint: const Text("-- Select one --"),
                         items: const [
                           DropdownMenuItem(
-                            value: "Casual Leave",
-                            child: Text("Casual Leave"),
+                            value: "Casual",
+                            child: Text("Casual"),
                           ),
+                          // DropdownMenuItem(
+                          //   value: "Sick Leave",
+                          //   child: Text("Sick Leave"),
+                          // ),
                           DropdownMenuItem(
-                            value: "Sick Leave",
-                            child: Text("Sick Leave"),
-                          ),
-                          DropdownMenuItem(
-                            value: "Emergency Leave",
-                            child: Text("Emergency Leave"),
+                            value: "Emergency",
+                            child: Text("Emergency"),
                           ),
                         ],
                         onChanged: (value) {
@@ -212,7 +227,66 @@ class _AddEmployeeLeaveState extends State<AddEmployeeLeave> {
                                 borderRadius: BorderRadius.circular(6),
                               ),
                             ),
-                            onPressed: () {},
+                            onPressed: () async {
+                              if (leaveType == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Select Leave Type"),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (fromDateController.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Select From Date"),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (toDateController.text.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Select To Date"),
+                                  ),
+                                );
+                                return;
+                              }
+
+                              if (reasonController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("Enter Reason")),
+                                );
+                                return;
+                              }
+
+                              try {
+                                final message = await context
+                                    .read<LeaveProvider>()
+                                    .applyLeave(
+                                      leaveType: leaveType!,
+                                      fromDate: fromDateController.text,
+                                      toDate: toDateController.text,
+                                      reason: reasonController.text.trim(),
+                                    );
+
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(message)),
+                                );
+
+                                Navigator.pop(context);
+                              } catch (e) {
+                                if (!mounted) return;
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(e.toString())),
+                                );
+                              }
+                            },
                             child: const Text(
                               "Apply",
                               style: TextStyle(

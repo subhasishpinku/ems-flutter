@@ -34,26 +34,26 @@ class BuildMyNavBar extends StatelessWidget {
           ),
 
           /// Hub
-          _navItem(
-            index: 1,
-            currentIndex: pageIndex,
-            selectedIcon: Icons.location_on,
-            unselectedIcon: Icons.location_on_outlined,
-            label: "Hub",
-          ),
+          // _navItem(
+          //   index: 1,
+          //   currentIndex: pageIndex,
+          //   selectedIcon: Icons.location_on,
+          //   unselectedIcon: Icons.location_on_outlined,
+          //   label: "Hub",
+          // ),
 
-          /// LCO
-          _navItem(
-            index: 2,
-            currentIndex: pageIndex,
-            selectedIcon: Icons.assignment,
-            unselectedIcon: Icons.assignment_outlined,
-            label: "LCO",
-          ),
+          // /// LCO
+          // _navItem(
+          //   index: 2,
+          //   currentIndex: pageIndex,
+          //   selectedIcon: Icons.assignment,
+          //   unselectedIcon: Icons.assignment_outlined,
+          //   label: "LCO",
+          // ),
 
           /// Profile
           _navItem(
-            index: 3,
+            index: 1,
             currentIndex: pageIndex,
             selectedIcon: Icons.person,
             unselectedIcon: Icons.person_outline,

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:ems/core/services/attendance_service.dart';
+import 'package:ems/core/services/profile_service.dart';
+import 'package:ems/view/Home/model/profile_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,6 +12,9 @@ class HomeProvider extends ChangeNotifier {
   final LocationService _locationService = LocationService();
   final InternetService _internetService = InternetService();
   final AttendanceService _attendanceService = AttendanceService();
+  final ProfileService _profileService = ProfileService();
+
+  bool isUpdatingProfile = false;
   Timer? _locationTimer;
   Timer? _workTimer;
 
@@ -20,11 +25,26 @@ class HomeProvider extends ChangeNotifier {
   LocationData? locationData;
   bool isLoading = false;
   String? errorMessage;
-
+  ProfileModel? profile;
   HomeProvider() {
     _loadPunchStatus();
     _startTimeUpdater();
     _startLocationTimer();
+
+    loadProfile();
+  }
+  Future<void> loadProfile() async {
+    try {
+      isLoading = true;
+      notifyListeners();
+
+      profile = await _profileService.getProfile();
+    } catch (e) {
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
   }
 
   void _startTimeUpdater() {
@@ -328,6 +348,72 @@ class HomeProvider extends ChangeNotifier {
         "${(workedDuration.inMinutes % 60).toString().padLeft(2, '0')}:"
         "${(workedDuration.inSeconds % 60).toString().padLeft(2, '0')}";
   }
+
+  Future<void> updateProfile({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required String dob,
+    required String joining,
+    required String address,
+    String? imagePath,
+  }) async {
+    try {
+      isLoading = true;
+      notifyListeners();
+
+      await _profileService.updateProfile(
+        name: name,
+        email: email,
+        phone: phone,
+        password: password,
+        dob: dob,
+        joiningDate: joining, // <-- এখানে joiningDate ব্যবহার করতে হবে
+        address: address,
+        imagePath: imagePath,
+      );
+
+      // Update হওয়ার পর নতুন profile load হবে
+      profile = await _profileService.getProfile();
+    } catch (e) {
+      rethrow;
+    } finally {
+      isLoading = false;
+      notifyListeners();
+    }
+  }
+  // Future<void> updateProfile({
+  //   required String name,
+  //   required String email,
+  //   required String phone,
+  //   required String password,
+  //   required String dob,
+  //   required String joining,
+  //   required String address,
+  //   String? imagePath,
+  // }) async {
+  //   try {
+  //     isUpdatingProfile = true;
+  //     notifyListeners();
+
+  //     final response = await _profileService.updateProfile(
+  //       name: name,
+  //       email: email,
+  //       phone: phone,
+  //       password: password,
+  //       dob: dob,
+  //       joiningDate: joining,
+  //       address: address,
+  //       imagePath: imagePath,
+  //     );
+
+  //     profile = ProfileModel.fromJson(response.data["data"]["profile"]);
+  //   } finally {
+  //     isUpdatingProfile = false;
+  //     notifyListeners();
+  //   }
+  // }
 
   @override
   void dispose() {

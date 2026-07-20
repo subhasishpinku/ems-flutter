@@ -1,3 +1,4 @@
+// field_sheet_create.dart
 import 'package:ems/FieldSheet/widgets/FeedbackCard.dart';
 import 'package:ems/FieldSheet/widgets/GpsRetryCard.dart';
 import 'package:ems/FieldSheet/widgets/InTimeCard.dart';
@@ -7,8 +8,10 @@ import 'package:ems/FieldSheet/widgets/ProblemSelectionCard.dart';
 import 'package:ems/FieldSheet/widgets/RemarksCard.dart';
 import 'package:ems/FieldSheet/widgets/UploadMoreCard.dart';
 import 'package:ems/FieldSheet/widgets/UploadOptionCard.dart';
+import 'package:ems/core/services/dvr_service.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:dio/dio.dart';
 import 'dart:io';
 
 // Enum for all steps
@@ -47,6 +50,9 @@ class Fieldsheetcreate extends StatefulWidget {
 }
 
 class _FieldsheetcreateState extends State<Fieldsheetcreate> {
+  // Services
+  final DvrService _dvrService = DvrService();
+
   // Form fields
   String? callType;
   String? visitType;
@@ -72,11 +78,30 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
   // Mobile & OTP
   String? mobileNumber;
   String? otp;
+  bool isOtpVerified = false;
+  bool isGpsChecked = false;
+  bool isLoading = false;
+
+  // GPS Location (simulated - in real app, get from device GPS)
+  String meetingLatitude = "22.572645";
+  String meetingLongitude = "88.363892";
+  String meetingAddress = "Kolkata, West Bengal, India";
+
+  // DVR Response
+  String? createdDvrId;
+  String? createdDvrIdEncoded;
 
   // Step management
   FieldSheetStep currentStep = FieldSheetStep.callType;
-  bool isOtpVerified = false;
-  bool isGpsChecked = false;
+
+  // Data from API
+  List<Map<String, dynamic>> callTypes = [];
+  List<Map<String, dynamic>> visitTypes = [];
+  List<Map<String, dynamic>> locations = [];
+  List<Map<String, dynamic>> companies = [];
+  List<Map<String, dynamic>> leads = [];
+  List<Map<String, dynamic>> problems = [];
+  List<Map<String, dynamic>> feedbacks = [];
 
   final List<String> leadList = [
     "1564161586",
@@ -105,12 +130,268 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
   final List<String> interestList = ["Broadband", "Cable", "Both"];
 
   @override
+  void initState() {
+    super.initState();
+    _loadMetadata();
+  }
+
+  // ========================================
+  // API Methods
+  // ========================================
+
+  Future<void> _loadMetadata() async {
+    try {
+      setState(() => isLoading = true);
+
+      // Load all metadata in parallel
+      final results = await Future.wait([
+        _dvrService.getCallTypes(),
+        _dvrService.getVisitTypes(),
+        _dvrService.getProblems(),
+        _dvrService.getLeads(),
+      ]);
+
+      // Process call types
+      if (results[0].data['status'] == 'success') {
+        final items = results[0].data['data']['items'] as List?;
+        if (items != null) {
+          setState(() {
+            callTypes = items.map((e) => e as Map<String, dynamic>).toList();
+          });
+        }
+      }
+
+      // Process visit types
+      if (results[1].data['status'] == 'success') {
+        final items = results[1].data['data']['items'] as List?;
+        if (items != null) {
+          setState(() {
+            visitTypes = items.map((e) => e as Map<String, dynamic>).toList();
+          });
+        }
+      }
+
+      // Process problems
+      if (results[2].data['status'] == 'success') {
+        final items = results[2].data['data']['items'] as List?;
+        if (items != null) {
+          setState(() {
+            problems = items.map((e) => e as Map<String, dynamic>).toList();
+          });
+        }
+      }
+
+      // Process leads
+      if (results[3].data['status'] == 'success') {
+        final items = results[3].data['data']['items'] as List?;
+        if (items != null) {
+          setState(() {
+            leads = items.map((e) => e as Map<String, dynamic>).toList();
+          });
+        }
+      }
+
+      setState(() => isLoading = false);
+    } catch (e) {
+      setState(() => isLoading = false);
+      _showSnackBar("Error loading metadata: $e");
+    }
+  }
+
+  Future<void> _sendOTP(String phone) async {
+    try {
+      setState(() => isLoading = true);
+      final response = await _dvrService.sendOTP(phoneNo: phone);
+
+      if (response.data['status'] == 'success') {
+        setState(() {
+          mobileNumber = phone;
+          currentStep = FieldSheetStep.otp;
+          isLoading = false;
+        });
+        _showSnackBar("OTP sent successfully to $phone");
+      } else {
+        setState(() => isLoading = false);
+        _showSnackBar(response.data['message'] ?? 'Failed to send OTP');
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      _showSnackBar("Error sending OTP: $e");
+    }
+  }
+
+  Future<void> _verifyOTP(String otpCode) async {
+    try {
+      setState(() => isLoading = true);
+      final response = await _dvrService.verifyOTP(
+        phoneNo: mobileNumber!,
+        otp: otpCode,
+      );
+
+      if (response.data['status'] == 'success') {
+        setState(() {
+          otp = otpCode;
+          isOtpVerified = true;
+          currentStep = FieldSheetStep.gps;
+          isLoading = false;
+        });
+        _showSnackBar("OTP Verified Successfully!");
+      } else {
+        setState(() => isLoading = false);
+        _showSnackBar(response.data['message'] ?? 'Invalid OTP');
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      _showSnackBar("Error verifying OTP: $e");
+    }
+  }
+
+  Future<void> _resendOTP() async {
+    if (mobileNumber != null) {
+      await _sendOTP(mobileNumber!);
+    }
+  }
+
+  Future<void> _submitDVR() async {
+    try {
+      setState(() => isLoading = true);
+
+      // Build DVR data
+      final Map<String, dynamic> data = {
+        'visit_type': _getEncodedId(visitTypes, visitType),
+        'in_time': selectedTime?.format(context) ?? '',
+        'feedback': selectedFeedback ?? '',
+        'otp_phone_no': mobileNumber ?? '',
+        'meeting_latitude': meetingLatitude,
+        'meeting_longitude': meetingLongitude,
+        'meeting_address': meetingAddress,
+      };
+
+      // Optional fields
+      if (callType != null) {
+        data['call_type'] = _getEncodedId(callTypes, callType);
+      }
+
+      if (selectedProblem != null) {
+        final problemId = _getEncodedId(problems, selectedProblem);
+        if (problemId != null) {
+          data['problem_ids'] = [problemId];
+        }
+      }
+
+      // Visit type specific
+      if (visitType == "Existing") {
+        if (locationType != null) {
+          data['location_id'] = _getEncodedId(locations, locationType);
+        }
+        if (lead != null) {
+          data['company_id'] = _getEncodedId(leads, lead);
+        }
+      } else if (visitType == "New") {
+        if (lead != null) {
+          data['lead_id'] = _getEncodedId(leads, lead);
+        }
+        if (lcoName != null && lcoName!.isNotEmpty) {
+          data['lco_name'] = lcoName;
+        }
+      }
+
+      // Remarks
+      if (customerName != null && customerName!.isNotEmpty) {
+        data['remarks'] = customerName;
+      }
+
+      // Call API
+      final response = await _dvrService.createDVR(data: data);
+
+      if (response.data['status'] == 'success') {
+        final dvrData = response.data['data'];
+        setState(() {
+          createdDvrId = dvrData['dvr_id']?.toString();
+          createdDvrIdEncoded = dvrData['dvr_id_encoded'];
+          isLoading = false;
+        });
+
+        // Upload documents if any
+        if (documents.isNotEmpty && createdDvrIdEncoded != null) {
+          await _uploadDocuments(createdDvrIdEncoded!);
+        }
+
+        // Move to completed step
+        setState(() {
+          currentStep = FieldSheetStep.completed;
+        });
+        _showSnackBar("DVR submitted successfully!");
+      } else {
+        setState(() => isLoading = false);
+        _showSnackBar(response.data['message'] ?? 'Failed to create DVR');
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+      _showSnackBar("Error submitting DVR: $e");
+    }
+  }
+
+  Future<void> _uploadDocuments(String dvrId) async {
+    try {
+      final List<MultipartFile> files = [];
+
+      for (final file in documents) {
+        final multipartFile = await MultipartFile.fromFile(
+          file.path,
+          filename: file.path.split('/').last,
+        );
+        files.add(multipartFile);
+      }
+
+      final response = await _dvrService.uploadDocuments(
+        dvrId: dvrId,
+        files: files,
+        documentMeta: [
+          {
+            'doc_type': 'MQ==', // Base64 encoded document type ID
+            'description': 'Field Sheet Document',
+          }
+        ],
+      );
+
+      if (response.data['status'] != 'success') {
+        _showSnackBar("Warning: Documents uploaded with errors");
+      }
+    } catch (e) {
+      _showSnackBar("Error uploading documents: $e");
+    }
+  }
+
+  String? _getEncodedId(List<Map<String, dynamic>> items, String? label) {
+    if (label == null) return null;
+    final item = items.firstWhere(
+      (e) => e['label'] == label || e['value'] == label,
+      orElse: () => {},
+    );
+    return item['value'] ?? item['id']?.toString();
+  }
+
+  // ========================================
+  // Widget Build Methods
+  // ========================================
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Field Sheet Creation'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        actions: [
+          if (isLoading)
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -225,10 +506,25 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: const [
-                DropdownMenuItem(value: "Indoor", child: Text("Indoor")),
-                DropdownMenuItem(value: "Outdoor", child: Text("Outdoor")),
-              ],
+              items: callTypes.isEmpty
+                  ? const [
+                      DropdownMenuItem<String>(
+                        value: "Indoor",
+                        child: Text("Indoor"),
+                      ),
+                      DropdownMenuItem<String>(
+                        value: "Outdoor",
+                        child: Text("Outdoor"),
+                      ),
+                    ]
+                  : callTypes
+                      .map<DropdownMenuItem<String>>(
+                        (e) => DropdownMenuItem<String>(
+                          value: e['label'],
+                          child: Text(e['label']),
+                        ),
+                      )
+                      .toList(),
               onChanged: (value) => setState(() => callType = value),
             ),
             const SizedBox(height: 20),
@@ -278,10 +574,25 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: const [
-                DropdownMenuItem(value: "New", child: Text("New")),
-                DropdownMenuItem(value: "Existing", child: Text("Existing")),
-              ],
+              items: visitTypes.isEmpty
+                  ? const [
+                      DropdownMenuItem<String>(
+                        value: "New",
+                        child: Text("New"),
+                      ),
+                      DropdownMenuItem<String>(
+                        value: "Existing",
+                        child: Text("Existing"),
+                      ),
+                    ]
+                  : visitTypes
+                      .map<DropdownMenuItem<String>>(
+                        (e) => DropdownMenuItem<String>(
+                          value: e['label'],
+                          child: Text(e['label']),
+                        ),
+                      )
+                      .toList(),
               onChanged: (value) => setState(() => visitType = value),
             ),
             const SizedBox(height: 20),
@@ -342,8 +653,14 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                 ),
               ),
               items: const [
-                DropdownMenuItem(value: "Corporate", child: Text("Corporate")),
-                DropdownMenuItem(value: "LCO", child: Text("LCO")),
+                DropdownMenuItem<String>(
+                  value: "Corporate",
+                  child: Text("Corporate"),
+                ),
+                DropdownMenuItem<String>(
+                  value: "LCO",
+                  child: Text("LCO"),
+                ),
               ],
               onChanged: (value) => setState(() => locationType = value),
             ),
@@ -402,17 +719,29 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              items: leadList
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                  .toList(),
+              items: leads.isEmpty
+                  ? leadList
+                      .map<DropdownMenuItem<String>>(
+                        (e) => DropdownMenuItem<String>(
+                          value: e,
+                          child: Text(e),
+                        ),
+                      )
+                      .toList()
+                  : leads
+                      .map<DropdownMenuItem<String>>(
+                        (e) => DropdownMenuItem<String>(
+                          value: e['label'],
+                          child: Text(e['label']),
+                        ),
+                      )
+                      .toList(),
               onChanged: (value) => setState(() => lead = value),
             ),
             const SizedBox(height: 12),
-            // Create New Lead Button
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               onPressed: () {
-                // Navigate to Customer Interest step
                 setState(() => currentStep = FieldSheetStep.customerInterest);
               },
               icon: const Icon(Icons.add, color: Colors.white),
@@ -453,7 +782,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
     );
   }
 
-  // STEP 4: Customer Interested In
+  // STEP 4: Customer Interest
   Widget _buildCustomerInterestStep() {
     return Card(
       color: const Color(0xffEEF3FB),
@@ -478,7 +807,12 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                 ),
               ),
               items: interestList
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .map<DropdownMenuItem<String>>(
+                    (e) => DropdownMenuItem<String>(
+                      value: e,
+                      child: Text(e),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) => setState(() => customerInterest = value),
             ),
@@ -731,7 +1065,12 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                 ),
               ),
               items: hubList
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .map<DropdownMenuItem<String>>(
+                    (e) => DropdownMenuItem<String>(
+                      value: e,
+                      child: Text(e),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) => setState(() => hub = value),
             ),
@@ -814,7 +1153,6 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                     onPressed: () {
                       if (customerAddress != null &&
                           customerAddress!.isNotEmpty) {
-                        // Show success dialog
                         _showLeadSuccessDialog();
                       } else {
                         _showSnackBar("Please enter customer address");
@@ -868,7 +1206,6 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
-                      // Set lead name from customer name
                       lead = customerName;
                       setState(() => currentStep = FieldSheetStep.lcoName);
                     },
@@ -967,50 +1304,38 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 12),
-            const Text.rich(
+            Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(
+                  const TextSpan(
                     text: "Contact: ",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  TextSpan(text: "156156"),
+                  TextSpan(text: customerMobile ?? "N/A"),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            const Text.rich(
+            Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(
+                  const TextSpan(
                     text: "Address: ",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  TextSpan(text: "I. B Road, Sanapur, Karnataka 583234, India"),
+                  TextSpan(text: customerAddress ?? "N/A"),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-            const Text.rich(
+            Text.rich(
               TextSpan(
                 children: [
-                  TextSpan(
-                    text: "Pincode: ",
+                  const TextSpan(
+                    text: "Hub: ",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  TextSpan(text: "583234"),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text.rich(
-              TextSpan(
-                children: [
-                  TextSpan(
-                    text: "Nearest Hub: ",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  TextSpan(text: "Adrit_C/R"),
+                  TextSpan(text: hub ?? "N/A"),
                 ],
               ),
             ),
@@ -1062,7 +1387,10 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
   Widget _buildFeedbackStep() {
     return FeedbackCard(
       onSend: (feedback) {
-        setState(() => currentStep = FieldSheetStep.remarks);
+        setState(() {
+          selectedFeedback = feedback;
+          currentStep = FieldSheetStep.remarks;
+        });
       },
       onBack: () => setState(() => currentStep = FieldSheetStep.inTime),
     );
@@ -1194,11 +1522,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
   Widget _buildMobileOtpStep() {
     return MobileOtpCard(
       onSend: (mobile) {
-        setState(() {
-          mobileNumber = mobile;
-          currentStep = FieldSheetStep.otp;
-        });
-        _showSnackBar("OTP sent to $mobile");
+        _sendOTP(mobile);
       },
       onBack: () => setState(() => currentStep = FieldSheetStep.uploadChoice),
     );
@@ -1208,17 +1532,10 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
   Widget _buildOtpVerificationStep() {
     return OtpVerificationCard(
       mobile: mobileNumber ?? "",
-      onVerify: (otp) {
-        setState(() {
-          this.otp = otp;
-          isOtpVerified = true;
-          currentStep = FieldSheetStep.gps;
-        });
-        _showSnackBar("OTP Verified Successfully!");
+      onVerify: (otpCode) {
+        _verifyOTP(otpCode);
       },
-      onResend: () {
-        _showSnackBar("OTP Resent to $mobileNumber");
-      },
+      onResend: _resendOTP,
       onBack: () => setState(() => currentStep = FieldSheetStep.otpMobile),
     );
   }
@@ -1228,7 +1545,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
     return GpsRetryCard(
       onSelect: (option) {
         if (option == "Retry Submit") {
-          _checkGps();
+          _checkGpsAndSubmit();
         } else {
           setState(() => currentStep = FieldSheetStep.otp);
         }
@@ -1254,6 +1571,11 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
+            Text(
+              "DVR ID: ${createdDvrId ?? 'N/A'}",
+              style: const TextStyle(fontSize: 14, color: Colors.blue),
+            ),
+            const SizedBox(height: 8),
             const Text(
               "GPS Location captured successfully",
               style: TextStyle(fontSize: 14, color: Colors.grey),
@@ -1271,7 +1593,10 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
     );
   }
 
+  // ========================================
   // Helper Methods
+  // ========================================
+
   Future<void> _pickDocument() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -1307,9 +1632,9 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text("Name: $customerName"),
-            Text("Mobile: $customerMobile"),
-            Text("Email: $customerEmail"),
+            Text("Name: ${customerName ?? 'N/A'}"),
+            Text("Mobile: ${customerMobile ?? 'N/A'}"),
+            Text("Email: ${customerEmail ?? 'N/A'}"),
           ],
         ),
         actions: [
@@ -1346,7 +1671,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
     );
   }
 
-  void _checkGps() {
+  void _checkGpsAndSubmit() {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -1362,9 +1687,17 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
       ),
     );
 
+    // Simulate GPS check
     Future.delayed(const Duration(seconds: 2), () {
       Navigator.pop(context);
-      setState(() => currentStep = FieldSheetStep.completed);
+      // In real app, get actual GPS coordinates here
+      // For demo, using hardcoded values
+      meetingLatitude = "22.572645";
+      meetingLongitude = "88.363892";
+      meetingAddress = "Kolkata, West Bengal, India";
+
+      // Submit DVR
+      _submitDVR();
     });
   }
 

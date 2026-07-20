@@ -13,6 +13,7 @@ class LeaveProvider extends ChangeNotifier {
   // String? selectedEmployee;
   Employee? selectedEmployee;
   List<LeaveModel> leaveList = [];
+  bool isApplying = false;
 
   bool isSearching = false;
   Future<void> loadEmployees() async {
@@ -37,6 +38,27 @@ class LeaveProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Future<void> searchLeave({
+  //   String? status,
+  //   String? fromDate,
+  //   String? toDate,
+  // }) async {
+  //   try {
+  //     isSearching = true;
+  //     notifyListeners();
+
+  //     leaveList = await _service.getLeaveList(
+  //       status: status,
+  //       fromDate: fromDate,
+  //       toDate: toDate,
+  //       employeeId: selectedEmployee?.empNo, // null হলে পাঠাবে না
+  //     );
+  //   } finally {
+  //     isSearching = false;
+  //     notifyListeners();
+  //   }
+  // }
+
   Future<void> searchLeave({
     required String status,
     required String fromDate,
@@ -58,6 +80,30 @@ class LeaveProvider extends ChangeNotifier {
       );
     } finally {
       isSearching = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String> applyLeave({
+    required String leaveType,
+    required String fromDate,
+    required String toDate,
+    required String reason,
+  }) async {
+    try {
+      isApplying = true;
+      notifyListeners();
+
+      final response = await _service.applyLeave(
+        leaveType: leaveType,
+        fromDate: fromDate,
+        toDate: toDate,
+        reason: reason,
+      );
+
+      return response.data["message"];
+    } finally {
+      isApplying = false;
       notifyListeners();
     }
   }

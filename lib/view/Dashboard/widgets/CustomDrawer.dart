@@ -5,46 +5,102 @@ import 'package:ems/LeaveApplication/leaveapplication.dart';
 import 'package:ems/core/services/auth_service.dart';
 import 'package:ems/view/LoginScreen/loginscreen.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ems/view/Home/providers/home_provider.dart';
 
-class CustomDrawer extends StatelessWidget {
+class CustomDrawer extends StatefulWidget {
   const CustomDrawer({super.key});
 
   @override
+  State<CustomDrawer> createState() => _CustomDrawerState();
+}
+
+class _CustomDrawerState extends State<CustomDrawer> {
+  @override
+  void initState() {
+    super.initState();
+
+    Future.microtask(() {
+      context.read<HomeProvider>().loadProfile();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<HomeProvider>(context);
+
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          const UserAccountsDrawerHeader(
-            decoration: BoxDecoration(color: Colors.blue),
-            accountName: Text("Subhasish Singha"),
-            accountEmail: Text("pinku.subhasish@gmail.com"),
-            currentAccountPictureSize: Size.square(50),
+          // const UserAccountsDrawerHeader(
+          //   decoration: BoxDecoration(color: Colors.blue),
+          //   accountName: Text("Subhasish Singha"),
+          //   accountEmail: Text("pinku.subhasish@gmail.com"),
+          //   currentAccountPictureSize: Size.square(50),
+          //   currentAccountPicture: CircleAvatar(
+          //     backgroundColor: Colors.white,
+          //     child: Text(
+          //       "HI",
+          //       style: TextStyle(
+          //         fontSize: 30,
+          //         color: Colors.blue,
+          //         fontWeight: FontWeight.bold,
+          //       ),
+          //     ),
+          //   ),
+          // ),
+          UserAccountsDrawerHeader(
+            decoration: const BoxDecoration(color: Colors.blue),
+
+            accountName: Text(
+              provider.profile?.empName ?? "",
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+
+            accountEmail: Text(provider.profile?.email ?? ""),
+
+            currentAccountPictureSize: const Size.square(60),
+
             currentAccountPicture: CircleAvatar(
               backgroundColor: Colors.white,
-              child: Text(
-                "HI",
-                style: TextStyle(
-                  fontSize: 30,
-                  color: Colors.blue,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+
+              backgroundImage:
+                  provider.profile != null &&
+                      provider.profile!.profileImage.isNotEmpty
+                  ? NetworkImage(
+                      "https://ems.ueplnet.com${provider.profile!.profileImage}",
+                    )
+                  : null,
+
+              child:
+                  provider.profile == null ||
+                      provider.profile!.profileImage.isEmpty
+                  ? Text(
+                      provider.profile?.empName.isNotEmpty == true
+                          ? provider.profile!.empName[0].toUpperCase()
+                          : "U",
+                      style: const TextStyle(
+                        fontSize: 28,
+                        color: Colors.blue,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )
+                  : null,
             ),
           ),
-
           // Lead
-          ListTile(
-            leading: const Icon(Icons.people_alt_outlined),
-            title: const Text('Lead'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const LeadScreen()),
-              );
-            },
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.people_alt_outlined),
+          //   title: const Text('Lead'),
+          //   onTap: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(builder: (context) => const LeadScreen()),
+          //     );
+          //   },
+          // ),
 
           // Field Sheet
           ListTile(
@@ -61,13 +117,13 @@ class CustomDrawer extends StatelessWidget {
           ),
 
           // Task Manager
-          ListTile(
-            leading: const Icon(Icons.task_alt_outlined),
-            title: const Text('Task Manager'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.task_alt_outlined),
+          //   title: const Text('Task Manager'),
+          //   onTap: () {
+          //     Navigator.pop(context);
+          //   },
+          // ),
 
           // Leave Application
           ListTile(
@@ -82,25 +138,25 @@ class CustomDrawer extends StatelessWidget {
               );
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.event_note_outlined),
-            title: const Text('DVR'),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const DvrScreen()),
-              );
-            },
-          ),
-          // Leave Report
-          ListTile(
-            leading: const Icon(Icons.assessment_outlined),
-            title: const Text('Leave Report'),
-            onTap: () {
-              Navigator.pop(context);
-            },
-          ),
+          // ListTile(
+          //   leading: const Icon(Icons.event_note_outlined),
+          //   title: const Text('DVR'),
+          //   onTap: () {
+          //     Navigator.push(
+          //       context,
+          //       MaterialPageRoute(builder: (context) => const DvrScreen()),
+          //     );
+          //   },
+          // ),
 
+          // Leave Report
+          // ListTile(
+          //   leading: const Icon(Icons.assessment_outlined),
+          //   title: const Text('Leave Report'),
+          //   onTap: () {
+          //     Navigator.pop(context);
+          //   },
+          // ),
           const Divider(),
 
           // Logout
@@ -126,6 +182,52 @@ class CustomDrawer extends StatelessWidget {
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(content: Text(response.data["message"])),
+                  );
+
+                  try {
+                    final refreshResponse = await AuthService().refreshToken();
+
+                    if (refreshResponse.data["status"] == "success") {
+                      final prefs = await SharedPreferences.getInstance();
+
+                      // Save new token
+                      await prefs.setString(
+                        "token",
+                        refreshResponse.data["data"]["token"],
+                      );
+
+                      // Retry logout
+                      final logoutResponse = await AuthService().logout();
+
+                      if (logoutResponse.data["status"] == "success") {
+                        await prefs.clear();
+
+                        if (context.mounted) {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                            (route) => false,
+                          );
+                        }
+                      }
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(refreshResponse.data["message"]),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
                   );
                 }
               } catch (e) {

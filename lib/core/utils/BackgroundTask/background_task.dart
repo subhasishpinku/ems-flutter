@@ -217,6 +217,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:io'; // Add this import
 
+import 'package:ems/view/Home/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -233,7 +234,7 @@ Future<void> initializeService() async {
     description: 'Background Location Tracking',
     importance: Importance.max,
   );
-  
+
   final FlutterLocalNotificationsPlugin notifications =
       FlutterLocalNotificationsPlugin();
 
@@ -248,7 +249,7 @@ Future<void> initializeService() async {
 
   await notifications
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
+        AndroidFlutterLocalNotificationsPlugin
       >()
       ?.createNotificationChannel(channel);
 
@@ -312,7 +313,10 @@ void onStart(ServiceInstance service) async {
         position.latitude,
         position.longitude,
       );
-
+      await LocationService().createLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
       String address = "Unknown";
 
       if (placemarks.isNotEmpty) {

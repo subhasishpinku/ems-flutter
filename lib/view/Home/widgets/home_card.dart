@@ -13,10 +13,10 @@ class HomeCard extends StatelessWidget {
       if (!provider.isPunchIn) {
         // Punch In
         await provider.punchIn();
-        
+
         if (context.mounted) {
           showLocationDialog(context, provider, "Punch In Successful");
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("✅ Punch In recorded successfully."),
@@ -28,10 +28,10 @@ class HomeCard extends StatelessWidget {
       } else {
         // Punch Out
         await provider.punchOut();
-        
+
         if (context.mounted) {
           showLocationDialog(context, provider, "Punch Out Successful");
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("✅ Punch Out recorded successfully."),
@@ -69,7 +69,9 @@ class HomeCard extends StatelessWidget {
     return Consumer<HomeProvider>(
       builder: (context, provider, child) {
         final time = DateFormat("hh:mm:ss a").format(provider.currentTime);
-        final date = DateFormat("EEE, d MMMM yyyy").format(provider.currentTime);
+        final date = DateFormat(
+          "EEE, d MMMM yyyy",
+        ).format(provider.currentTime);
 
         return Padding(
           padding: const EdgeInsets.all(16.0),
@@ -96,28 +98,32 @@ class HomeCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 25,
                       backgroundColor: Colors.white,
-                      child: Icon(
-                        Icons.person,
-                        color: Color(0xFF1565C0),
-                        size: 30,
-                      ),
+                      child: provider.profile?.profileImage.isNotEmpty == true
+                          ? ClipOval(
+                              child: Image.network(
+                                provider.profile!.profileImage,
+                                fit: BoxFit.cover,
+                                width: 50,
+                                height: 50,
+                              ),
+                            )
+                          : const Icon(Icons.person, color: Color(0xFF1565C0)),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            "Welcome Subhasish Singha",
-                            style: TextStyle(
+                          Text(
+                            "Welcome ${provider.profile?.empName ?? ""}",
+                            style: const TextStyle(
                               fontSize: 18,
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
-                            overflow: TextOverflow.ellipsis,
                           ),
                           Text(
                             time,
@@ -127,14 +133,18 @@ class HomeCard extends StatelessWidget {
                               fontWeight: FontWeight.w300,
                             ),
                           ),
+                          Text(
+                            provider.profile?.email ?? "",
+                            style: const TextStyle(color: Colors.white70),
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -187,16 +197,22 @@ class HomeCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: provider.isLoading ? null : () => _handlePunch(context, provider),
+                    onPressed: provider.isLoading
+                        ? null
+                        : () => _handlePunch(context, provider),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: provider.isPunchIn ? Colors.red : Colors.white,
-                      foregroundColor: provider.isPunchIn ? Colors.white : const Color(0xFF1565C0),
+                      backgroundColor: provider.isPunchIn
+                          ? Colors.red
+                          : Colors.white,
+                      foregroundColor: provider.isPunchIn
+                          ? Colors.white
+                          : const Color(0xFF1565C0),
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -216,9 +232,7 @@ class HomeCard extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                provider.isPunchIn 
-                                  ? Icons.logout 
-                                  : Icons.login,
+                                provider.isPunchIn ? Icons.logout : Icons.login,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),

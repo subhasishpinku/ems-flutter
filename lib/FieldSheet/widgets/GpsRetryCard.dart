@@ -1,14 +1,11 @@
+// GpsRetryCard.dart
 import 'package:flutter/material.dart';
 
 class GpsRetryCard extends StatefulWidget {
   final Function(String) onSelect;
   final VoidCallback onBack;
 
-  const GpsRetryCard({
-    super.key,
-    required this.onSelect,
-    required this.onBack,
-  });
+  const GpsRetryCard({super.key, required this.onSelect, required this.onBack});
 
   @override
   State<GpsRetryCard> createState() => _GpsRetryCardState();
@@ -38,11 +35,11 @@ class _GpsRetryCardState extends State<GpsRetryCard> {
                   ),
                 ),
                 items: const [
-                  DropdownMenuItem(
+                  DropdownMenuItem<String>(
                     value: "Retry Submit",
                     child: Text("Retry Submit (GPS enabled)"),
                   ),
-                  DropdownMenuItem(
+                  DropdownMenuItem<String>(
                     value: "Go Back",
                     child: Text("Go Back"),
                   ),

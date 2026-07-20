@@ -20,7 +20,6 @@
     <!-- For Android 13+ (API 33), you must also request these instead: -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>  
-
         <application
             android:label="ems"
             android:name="${applicationName}"
