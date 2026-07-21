@@ -54,6 +54,8 @@ dependencies:
   file_picker: ^8.1.4 # Changed from 3.0.4 to 8.1.4
 
   image_picker: ^1.2.3
+  cookie_jar: ^4.0.9
+  dio_cookie_manager: ^3.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter

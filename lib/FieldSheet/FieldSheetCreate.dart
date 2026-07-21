@@ -351,7 +351,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
           {
             'doc_type': 'MQ==', // Base64 encoded document type ID
             'description': 'Field Sheet Document',
-          }
+          },
         ],
       );
 
@@ -411,21 +411,43 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
     final steps = FieldSheetStep.values;
     final currentIndex = steps.indexOf(currentStep);
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(steps.length - 1, (index) {
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          width: 15,
-          height: 4,
-          decoration: BoxDecoration(
-            color: index <= currentIndex ? Colors.blue : Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        );
-      }),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LinearProgressIndicator(
+          value: (currentIndex + 1) / steps.length,
+          minHeight: 8,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          "Step ${currentIndex + 1} of ${steps.length}",
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ],
     );
   }
+  // Widget _buildStepIndicator() {
+  //   final steps = FieldSheetStep.values;
+  //   final currentIndex = steps.indexOf(currentStep);
+
+  //   return SingleChildScrollView(
+  //     scrollDirection: Axis.horizontal,
+  //     child: Row(
+  //       children: List.generate(steps.length - 1, (index) {
+  //         return Container(
+  //           margin: const EdgeInsets.symmetric(horizontal: 2),
+  //           width: 15,
+  //           height: 4,
+  //           decoration: BoxDecoration(
+  //             color: index <= currentIndex ? Colors.blue : Colors.grey.shade300,
+  //             borderRadius: BorderRadius.circular(2),
+  //           ),
+  //         );
+  //       }),
+  //     ),
+  //   );
+  // }
 
   Widget _buildCurrentStep() {
     switch (currentStep) {
@@ -518,13 +540,13 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                       ),
                     ]
                   : callTypes
-                      .map<DropdownMenuItem<String>>(
-                        (e) => DropdownMenuItem<String>(
-                          value: e['label'],
-                          child: Text(e['label']),
-                        ),
-                      )
-                      .toList(),
+                        .map<DropdownMenuItem<String>>(
+                          (e) => DropdownMenuItem<String>(
+                            value: e['label'],
+                            child: Text(e['label']),
+                          ),
+                        )
+                        .toList(),
               onChanged: (value) => setState(() => callType = value),
             ),
             const SizedBox(height: 20),
@@ -586,13 +608,13 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                       ),
                     ]
                   : visitTypes
-                      .map<DropdownMenuItem<String>>(
-                        (e) => DropdownMenuItem<String>(
-                          value: e['label'],
-                          child: Text(e['label']),
-                        ),
-                      )
-                      .toList(),
+                        .map<DropdownMenuItem<String>>(
+                          (e) => DropdownMenuItem<String>(
+                            value: e['label'],
+                            child: Text(e['label']),
+                          ),
+                        )
+                        .toList(),
               onChanged: (value) => setState(() => visitType = value),
             ),
             const SizedBox(height: 20),
@@ -657,10 +679,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
                   value: "Corporate",
                   child: Text("Corporate"),
                 ),
-                DropdownMenuItem<String>(
-                  value: "LCO",
-                  child: Text("LCO"),
-                ),
+                DropdownMenuItem<String>(value: "LCO", child: Text("LCO")),
               ],
               onChanged: (value) => setState(() => locationType = value),
             ),
@@ -721,21 +740,21 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
               ),
               items: leads.isEmpty
                   ? leadList
-                      .map<DropdownMenuItem<String>>(
-                        (e) => DropdownMenuItem<String>(
-                          value: e,
-                          child: Text(e),
-                        ),
-                      )
-                      .toList()
+                        .map<DropdownMenuItem<String>>(
+                          (e) => DropdownMenuItem<String>(
+                            value: e,
+                            child: Text(e),
+                          ),
+                        )
+                        .toList()
                   : leads
-                      .map<DropdownMenuItem<String>>(
-                        (e) => DropdownMenuItem<String>(
-                          value: e['label'],
-                          child: Text(e['label']),
-                        ),
-                      )
-                      .toList(),
+                        .map<DropdownMenuItem<String>>(
+                          (e) => DropdownMenuItem<String>(
+                            value: e['label'],
+                            child: Text(e['label']),
+                          ),
+                        )
+                        .toList(),
               onChanged: (value) => setState(() => lead = value),
             ),
             const SizedBox(height: 12),
@@ -808,10 +827,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
               ),
               items: interestList
                   .map<DropdownMenuItem<String>>(
-                    (e) => DropdownMenuItem<String>(
-                      value: e,
-                      child: Text(e),
-                    ),
+                    (e) => DropdownMenuItem<String>(value: e, child: Text(e)),
                   )
                   .toList(),
               onChanged: (value) => setState(() => customerInterest = value),
@@ -1066,10 +1082,7 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
               ),
               items: hubList
                   .map<DropdownMenuItem<String>>(
-                    (e) => DropdownMenuItem<String>(
-                      value: e,
-                      child: Text(e),
-                    ),
+                    (e) => DropdownMenuItem<String>(value: e, child: Text(e)),
                   )
                   .toList(),
               onChanged: (value) => setState(() => hub = value),
@@ -1376,8 +1389,17 @@ class _FieldsheetcreateState extends State<Fieldsheetcreate> {
   // STEP 14: In Time
   Widget _buildInTimeStep() {
     return InTimeCard(
+      // onSend: (time) {
+      //   setState(() => currentStep = FieldSheetStep.feedback);
+      // },
       onSend: (time) {
-        setState(() => currentStep = FieldSheetStep.feedback);
+        setState(() {
+          selectedTime = TimeOfDay(
+            hour: int.parse(time.split(":")[0]),
+            minute: int.parse(time.split(":")[1].split(" ")[0]),
+          );
+          currentStep = FieldSheetStep.feedback;
+        });
       },
       onBack: () => setState(() => currentStep = FieldSheetStep.problem),
     );

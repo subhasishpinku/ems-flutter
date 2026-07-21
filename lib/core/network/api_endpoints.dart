@@ -11,6 +11,8 @@ class ApiEndpoints {
 
   // ================= DASHBOARD =================
   static const String dashboard = "dashboard/dashboard.php";
+    static const String dashboardMonths = "dashboard/months.php";
+
 
   // ================= ATTENDANCE =================
   static const String punchIn = "attendance/punch-in.php";

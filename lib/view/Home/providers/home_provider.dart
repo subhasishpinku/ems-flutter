@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:ems/core/services/attendance_service.dart';
+import 'package:ems/core/services/dashboard_service.dart';
 import 'package:ems/core/services/profile_service.dart';
+import 'package:ems/view/Home/model/dashboard_month.dart';
 import 'package:ems/view/Home/model/profile_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -13,7 +15,13 @@ class HomeProvider extends ChangeNotifier {
   final InternetService _internetService = InternetService();
   final AttendanceService _attendanceService = AttendanceService();
   final ProfileService _profileService = ProfileService();
+  DateTime? punchInTime;
+  final DashboardService _dashboardService = DashboardService();
 
+  List<DashboardMonth> months = [];
+
+  DashboardMonth? selectedMonth;
+  static const String _punchInTimeKey = "punch_in_time";
   bool isUpdatingProfile = false;
   Timer? _locationTimer;
   Timer? _workTimer;
@@ -32,7 +40,30 @@ class HomeProvider extends ChangeNotifier {
     _startLocationTimer();
 
     loadProfile();
+    loadMonths();
   }
+  Future<void> loadMonths() async {
+    months = await _dashboardService.getMonths();
+
+    selectedMonth = months.firstWhere((e) => e.selected);
+
+    notifyListeners();
+  }
+Future<void> changeMonth(DashboardMonth month) async {
+  selectedMonth = month;
+
+  notifyListeners();
+
+  // await loadAttendance(
+  //   month: month.month,
+  //   year: month.year,
+  // );
+
+  // await loadVisitSummary(
+  //   month: month.month,
+  //   year: month.year,
+  // );
+}
   Future<void> loadProfile() async {
     try {
       isLoading = true;
@@ -65,6 +96,14 @@ class HomeProvider extends ChangeNotifier {
 
     isPunchIn = prefs.getBool("isPunchIn") ?? false;
 
+    final savedTime = prefs.getString(_punchInTimeKey);
+
+    if (savedTime != null) {
+      punchInTime = DateTime.parse(savedTime);
+
+      workedDuration = DateTime.now().difference(punchInTime!);
+    }
+
     if (isPunchIn) {
       startWorkTimer();
     }
@@ -96,9 +135,11 @@ class HomeProvider extends ChangeNotifier {
   void startWorkTimer() {
     if (_workTimer != null) return;
 
-    _workTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      workedDuration += const Duration(seconds: 1);
-      notifyListeners();
+    _workTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (punchInTime != null) {
+        workedDuration = DateTime.now().difference(punchInTime!);
+        notifyListeners();
+      }
     });
   }
 
@@ -141,7 +182,9 @@ class HomeProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setBool("isPunchIn", true);
+        punchInTime = DateTime.now();
 
+        await prefs.setString(_punchInTimeKey, punchInTime!.toIso8601String());
         final service = FlutterBackgroundService();
 
         if (!await service.isRunning()) {
@@ -167,7 +210,16 @@ class HomeProvider extends ChangeNotifier {
         final prefs = await SharedPreferences.getInstance();
 
         await prefs.setBool("isPunchIn", true);
+        if (prefs.getString(_punchInTimeKey) == null) {
+          punchInTime = DateTime.now();
 
+          await prefs.setString(
+            _punchInTimeKey,
+            punchInTime!.toIso8601String(),
+          );
+        } else {
+          punchInTime = DateTime.parse(prefs.getString(_punchInTimeKey)!);
+        }
         final service = FlutterBackgroundService();
 
         if (!await service.isRunning()) {
@@ -328,7 +380,10 @@ class HomeProvider extends ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
 
       await prefs.setBool("isPunchIn", false);
+      await prefs.remove(_punchInTimeKey);
 
+      punchInTime = null;
+      workedDuration = Duration.zero;
       stopWorkTimer();
 
       final service = FlutterBackgroundService();

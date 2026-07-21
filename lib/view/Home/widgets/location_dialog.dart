@@ -1,6 +1,9 @@
+import 'package:ems/core/services/auth_service.dart';
 import 'package:ems/view/Home/providers/home_provider.dart';
+import 'package:ems/view/LoginScreen/loginscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void showLocationDialog(
   BuildContext context,
@@ -33,7 +36,7 @@ void showLocationDialog(
             "Address: ${provider.locationData?.address ?? 'N/A'}\n"
             "City: ${provider.locationData?.city ?? 'N/A'}\n"
             "State: ${provider.locationData?.state ?? 'N/A'}\n"
-            "Pincode: ${provider.locationData?.pincode ?? 'N/A'}"
+            "Pincode: ${provider.locationData?.pincode ?? 'N/A'}",
           ),
         ),
       ),
@@ -57,7 +60,7 @@ void showLocationDialog(
             styleInformation: BigTextStyleInformation(
               "Latitude: ${provider.locationData?.latitude ?? 'N/A'}\n"
               "Longitude: ${provider.locationData?.longitude ?? 'N/A'}\n"
-              "Address: ${provider.locationData?.address ?? 'N/A'}"
+              "Address: ${provider.locationData?.address ?? 'N/A'}",
             ),
           ),
         ),
@@ -80,17 +83,10 @@ void showLocationDialog(
               color: provider.isPunchIn ? Colors.green : Colors.red,
             ),
             const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(fontSize: 18),
-              ),
-            ),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 18))),
           ],
         ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
         content: provider.isLoading
             ? const SizedBox(
                 height: 100,
@@ -158,9 +154,7 @@ void showLocationDialog(
                             Expanded(
                               child: Text(
                                 provider.errorMessage!,
-                                style: TextStyle(
-                                  color: Colors.red.shade700,
-                                ),
+                                style: TextStyle(color: Colors.red.shade700),
                               ),
                             ),
                           ],
@@ -177,8 +171,28 @@ void showLocationDialog(
             child: const Text("CANCEL"),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
+
+              // Logout only after Punch Out
+              if (!provider.isPunchIn) {
+                try {
+                  await AuthService().logout();
+
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.clear();
+
+                  if (context.mounted) {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      (route) => false,
+                    );
+                  }
+                } catch (e) {
+                  print("Logout Error: $e");
+                }
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: provider.isPunchIn ? Colors.green : Colors.red,

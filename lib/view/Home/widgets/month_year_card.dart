@@ -1,33 +1,15 @@
+import 'package:ems/view/Home/model/dashboard_month.dart';
+import 'package:ems/view/Home/providers/home_provider.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
-class MonthYearCard extends StatefulWidget {
+class MonthYearCard extends StatelessWidget {
   const MonthYearCard({super.key});
 
   @override
-  State<MonthYearCard> createState() => _MonthYearCardState();
-}
-
-class _MonthYearCardState extends State<MonthYearCard> {
-  DateTime selectedDate = DateTime.now();
-
-  Future<void> _pickMonthYear() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: selectedDate,
-      firstDate: DateTime(2023),
-      lastDate: DateTime(2035),
-    );
-
-    if (picked != null) {
-      setState(() {
-        selectedDate = DateTime(picked.year, picked.month);
-      });
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final provider = context.watch<HomeProvider>();
+
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Container(
@@ -59,41 +41,60 @@ class _MonthYearCardState extends State<MonthYearCard> {
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
+                    fontSize: 17,
                   ),
                 ),
               ],
             ),
 
-            const SizedBox(height: 15),
+            const SizedBox(height: 18),
 
-            InkWell(
-              onTap: _pickMonthYear,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 14,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        DateFormat("MMMM yyyy").format(selectedDate),
-                        style: const TextStyle(fontSize: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: provider.months.isEmpty
+                  ? const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
+                        children: [
+                          CircularProgressIndicator(strokeWidth: 2),
+                          SizedBox(width: 12),
+                          Text("Loading months..."),
+                        ],
+                      ),
+                    )
+                  : DropdownButtonHideUnderline(
+                      child: DropdownButton<DashboardMonth>(
+                        value: provider.selectedMonth,
+                        isExpanded: true,
+                        icon: const Icon(Icons.keyboard_arrow_down),
+
+                        items: provider.months.map((month) {
+                          return DropdownMenuItem<DashboardMonth>(
+                            value: month,
+                            child: Text(
+                              month.label,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          );
+                        }).toList(),
+
+                        onChanged: (DashboardMonth? month) {
+                          if (month != null) {
+                            provider.changeMonth(month);
+                          }
+                        },
                       ),
                     ),
-                    const Icon(Icons.keyboard_arrow_down),
-                  ],
-                ),
-              ),
             ),
 
             const SizedBox(height: 15),
 
             Container(
+              width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white24,
@@ -101,15 +102,24 @@ class _MonthYearCardState extends State<MonthYearCard> {
               ),
               child: RichText(
                 text: TextSpan(
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
                   children: [
-                    const TextSpan(text: "🗓️ You selected "),
+                    const TextSpan(
+                      text: "🗓️ You selected ",
+                    ),
                     TextSpan(
-                      text: DateFormat("MMMM yyyy").format(selectedDate),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      text:
+                          provider.selectedMonth?.label ??
+                          "No Month Selected",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const TextSpan(
-                      text: " - View reports and data for this period.",
+                      text: "\nView attendance and visit reports for this month.",
                     ),
                   ],
                 ),
