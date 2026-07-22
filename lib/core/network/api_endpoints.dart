@@ -11,12 +11,14 @@ class ApiEndpoints {
 
   // ================= DASHBOARD =================
   static const String dashboard = "dashboard/dashboard.php";
-    static const String dashboardMonths = "dashboard/months.php";
-
+  static const String dashboardMonths = "dashboard/months.php";
 
   // ================= ATTENDANCE =================
   static const String punchIn = "attendance/punch-in.php";
   static const String punchOut = "attendance/punch-out.php";
+  static const String dailyattendence = "dashboard/daily-attendance.php";
+  static const String visitsummary = "dashboard/visit-summary.php";
+
   static const String attendanceReport = "attendance/report.php";
 
   // ================= LOCATION =================

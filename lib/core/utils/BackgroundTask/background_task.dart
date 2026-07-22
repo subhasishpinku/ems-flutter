@@ -217,6 +217,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'dart:io'; // Add this import
 
+import 'package:ems/core/utils/CountdownTimer.dart';
 import 'package:ems/view/Home/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -293,8 +294,9 @@ void onStart(ServiceInstance service) async {
   service.on("stopService").listen((event) {
     service.stopSelf();
   });
+  Timer.periodic(const Duration(minutes: 1), (timer) async {
+    print("1 minute timer fireds");
 
-  Timer.periodic(const Duration(minutes: 30), (timer) async {
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       LocationPermission permission = await Geolocator.checkPermission();
@@ -313,10 +315,41 @@ void onStart(ServiceInstance service) async {
         position.latitude,
         position.longitude,
       );
-      await LocationService().createLocation(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
+
+      // await LocationService().createLocation(
+      //   latitude: position.latitude,
+      //   longitude: position.longitude,
+      // );
+      // final countdown = CountdownTimer();
+
+      // countdown.start(() async {
+      //   Position position = await Geolocator.getCurrentPosition(
+      //     desiredAccuracy: LocationAccuracy.high,
+      //   );
+      //   await countdown.stop(() async {
+      //     print("Location sent");
+      //   });
+      //   await LocationService().createLocation(
+      //     latitude: position.latitude,
+      //     longitude: position.longitude,
+      //   );
+
+      //   print("Location sent after 30 minutes");
+      // });
+
+      Timer.periodic(const Duration(minutes: 10), (timer) async {
+        final position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+
+        await LocationService().createLocation(
+          latitude: position.latitude,
+          longitude: position.longitude,
+        );
+
+        print("Location sent");
+      });
+
       String address = "Unknown";
 
       if (placemarks.isNotEmpty) {
@@ -352,6 +385,64 @@ void onStart(ServiceInstance service) async {
       print("Location Error: $e");
     }
   });
+  // Timer.periodic(const Duration(minutes: 1), (timer) async {
+  //   try {
+  //     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+  //     LocationPermission permission = await Geolocator.checkPermission();
+
+  //     if (!serviceEnabled ||
+  //         permission == LocationPermission.denied ||
+  //         permission == LocationPermission.deniedForever) {
+  //       return;
+  //     }
+
+  //     Position position = await Geolocator.getCurrentPosition(
+  //       desiredAccuracy: LocationAccuracy.high,
+  //     );
+
+  //     List<Placemark> placemarks = await placemarkFromCoordinates(
+  //       position.latitude,
+  //       position.longitude,
+  //     );
+  //     await LocationService().createLocation(
+  //       latitude: position.latitude,
+  //       longitude: position.longitude,
+  //     );
+  //     String address = "Unknown";
+
+  //     if (placemarks.isNotEmpty) {
+  //       final place = placemarks.first;
+  //       address =
+  //           "${place.street}, ${place.locality}, ${place.administrativeArea}, ${place.country}";
+  //     }
+
+  //     if (service is AndroidServiceInstance) {
+  //       final place = placemarks.first;
+
+  //       service.setForegroundNotificationInfo(
+  //         title: "📍 Live Location",
+  //         content: "${place.street}, ${place.locality}, ${place.postalCode}",
+  //       );
+
+  //       // Try to show notification with custom sound
+  //       await _showNotificationWithSound(notifications, position, place);
+  //     }
+
+  //     service.invoke("update", {
+  //       "lat": position.latitude,
+  //       "lng": position.longitude,
+  //       "address": address,
+  //     });
+
+  //     print(
+  //       "Latitude: ${position.latitude}\n"
+  //       "Longitude: ${position.longitude}\n"
+  //       "Address: $address",
+  //     );
+  //   } catch (e) {
+  //     print("Location Error: $e");
+  //   }
+  // });
 }
 
 // Add this function to check if sound file exists

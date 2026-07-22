@@ -2,10 +2,14 @@ import 'dart:async';
 import 'package:ems/core/services/attendance_service.dart';
 import 'package:ems/core/services/dashboard_service.dart';
 import 'package:ems/core/services/profile_service.dart';
+import 'package:ems/core/utils/CountdownTimer.dart';
+import 'package:ems/view/Home/model/attendance_model.dart';
 import 'package:ems/view/Home/model/dashboard_month.dart';
 import 'package:ems/view/Home/model/profile_model.dart';
+import 'package:ems/view/Home/model/visitSummary_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/location_service.dart';
 import '../services/internet_service.dart';
@@ -34,6 +38,9 @@ class HomeProvider extends ChangeNotifier {
   bool isLoading = false;
   String? errorMessage;
   ProfileModel? profile;
+
+  AttendanceModel? attendance;
+  VisitSummaryModel? visitSummary;
   HomeProvider() {
     _loadPunchStatus();
     _startTimeUpdater();
@@ -47,23 +54,47 @@ class HomeProvider extends ChangeNotifier {
 
     selectedMonth = months.firstWhere((e) => e.selected);
 
+    await loadAttendance(
+      month: selectedMonth!.month,
+      year: selectedMonth!.year,
+    );
+
+    await loadVisitSummary(
+      month: selectedMonth!.month,
+      year: selectedMonth!.year,
+    );
+
     notifyListeners();
   }
-Future<void> changeMonth(DashboardMonth month) async {
-  selectedMonth = month;
 
-  notifyListeners();
+  Future<void> loadAttendance({required int month, required int year}) async {
+    attendance = await _attendanceService.getAttendance(
+      month: month,
+      year: year,
+    );
 
-  // await loadAttendance(
-  //   month: month.month,
-  //   year: month.year,
-  // );
+    notifyListeners();
+  }
 
-  // await loadVisitSummary(
-  //   month: month.month,
-  //   year: month.year,
-  // );
-}
+  Future<void> loadVisitSummary({required int month, required int year}) async {
+    visitSummary = await _attendanceService.getVisitSummary(
+      month: month,
+      year: year,
+    );
+
+    notifyListeners();
+  }
+
+  Future<void> changeMonth(DashboardMonth month) async {
+    selectedMonth = month;
+
+    notifyListeners();
+
+    await loadAttendance(month: month.month, year: month.year);
+
+    await loadVisitSummary(month: month.month, year: month.year);
+  }
+
   Future<void> loadProfile() async {
     try {
       isLoading = true;
@@ -86,7 +117,11 @@ Future<void> changeMonth(DashboardMonth month) async {
   }
 
   void _startLocationTimer() {
-    _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+    // _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
+    //   await fetchLocation();
+    // });
+    _locationTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+      print("1 minute timer fired");
       await fetchLocation();
     });
   }
@@ -188,6 +223,17 @@ Future<void> changeMonth(DashboardMonth month) async {
         final service = FlutterBackgroundService();
 
         if (!await service.isRunning()) {
+          final countdown = CountdownTimer();
+          Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          );
+          await LocationService().createLocation(
+            latitude: position.latitude,
+            longitude: position.longitude,
+          );
+          countdown.start(() async {
+            print("Location sent after 30 minutes");
+          });
           await service.startService();
         }
 
@@ -223,6 +269,18 @@ Future<void> changeMonth(DashboardMonth month) async {
         final service = FlutterBackgroundService();
 
         if (!await service.isRunning()) {
+          final countdown = CountdownTimer();
+          Position position = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.high,
+          );
+          await LocationService().createLocation(
+            latitude: position.latitude,
+            longitude: position.longitude,
+          );
+
+          countdown.start(() async {
+            print("Location sent after 30 minutes");
+          });
           await service.startService();
         }
 
@@ -391,6 +449,17 @@ Future<void> changeMonth(DashboardMonth month) async {
       service.invoke("stopService");
 
       isPunchIn = false;
+      final countdown = CountdownTimer();
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      await LocationService().createLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      await countdown.stop(() async {
+        print("Location sent");
+      });
 
       notifyListeners();
     } else {

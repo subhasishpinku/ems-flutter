@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:ems/core/network/api_client.dart';
 import 'package:ems/core/network/api_endpoints.dart';
+import 'package:ems/core/utils/CountdownTimer.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -78,6 +79,11 @@ class LocationService {
     );
 
     if (response.data["status"] == "success") {
+      // final countdown = CountdownTimer();
+
+      // countdown.start(() async {
+      //   print("Location sent");
+      // });
       return response;
     }
 

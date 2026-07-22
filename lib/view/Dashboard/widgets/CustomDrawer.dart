@@ -1,3 +1,10 @@
+import 'package:ems/Docket/DocketCreate/docket_create.dart';
+import 'package:ems/Docket/HoldRelese/hold_relese.dart';
+import 'package:ems/Docket/MaterialUse/material_use.dart';
+import 'package:ems/Docket/Start/docket_start.dart';
+import 'package:ems/Docket/Tranfer/tranfer.dart';
+import 'package:ems/Docket/VehicleFuledMovement/vehicle_fuled_movement.dart';
+import 'package:ems/Docket/close/docket_close.dart';
 import 'package:ems/Dvr/dvr_screen.dart';
 import 'package:ems/FieldSheet/fieldsheet.dart';
 import 'package:ems/Lead/leadscreen.dart';
@@ -157,6 +164,93 @@ class _CustomDrawerState extends State<CustomDrawer> {
           //     Navigator.pop(context);
           //   },
           // ),
+          ExpansionTile(
+            leading: const Icon(Icons.assignment),
+            title: const Text("Docket"),
+            childrenPadding: const EdgeInsets.only(left: 20),
+            children: [
+              ListTile(
+                title: const Text("Create"),
+                onTap: () {
+                  // Navigator.push(...);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DocketCreate(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text("Hold/Release"),
+                onTap: () {
+                  // Navigator.push(...);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HoldRelese()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text("Transfer"),
+                onTap: () {
+                  // Navigator.push(...);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const Tranfer()),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text("Start"),
+                onTap: () {
+                  // Navigator.push(...);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DocketStart(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text("Close"),
+                onTap: () {
+                  // Navigator.push(...);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const DocketClose(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text("Material Use"),
+                onTap: () {
+                  // Navigator.push(...);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MaterialUse(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text("Vehicle & Fuel Movement"),
+                onTap: () {
+                  // Navigator.push(...);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VehicleFuledMovement(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
           const Divider(),
 
           // Logout

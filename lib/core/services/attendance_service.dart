@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:ems/core/network/api_client.dart';
 import 'package:ems/core/network/api_endpoints.dart';
+import 'package:ems/view/Home/model/attendance_model.dart';
+import 'package:ems/view/Home/model/visitSummary_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AttendanceService {
@@ -69,5 +71,56 @@ class AttendanceService {
       print("PunchOut Error: ${e.response?.data}");
       throw Exception(e.response?.data?['message'] ?? e.message);
     }
+  }
+
+  Future<AttendanceModel> getAttendance({
+    required int month,
+    required int year,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    final token = prefs.getString("token") ?? "";
+
+    final response = await ApiClient.dio.get(
+      ApiEndpoints.dailyattendence,
+      queryParameters: {"month": month, "year": year},
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      ),
+    );
+
+    if (response.data["status"] != "success") {
+      throw Exception(response.data["message"]);
+    }
+
+    return AttendanceModel.fromJson(response.data["data"]["stats"]);
+  }
+
+  Future<VisitSummaryModel> getVisitSummary({
+    required int month,
+    required int year,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token") ?? "";
+
+    final response = await ApiClient.dio.get(
+      ApiEndpoints.visitsummary,
+      queryParameters: {"month": month, "year": year},
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      ),
+    );
+
+    if (response.data["status"] != "success") {
+      throw Exception(response.data["message"]);
+    }
+
+    return VisitSummaryModel.fromJson(response.data["data"]["stats"]);
   }
 }

@@ -1,10 +1,13 @@
+import 'package:ems/view/Home/providers/home_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class AttendanceCard extends StatelessWidget {
   const AttendanceCard({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<HomeProvider>();
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       padding: const EdgeInsets.all(16),
@@ -37,20 +40,20 @@ class AttendanceCard extends StatelessWidget {
           const SizedBox(height: 18),
 
           Row(
-            children: const [
+            children: [
               Expanded(
                 child: AttendanceBox(
                   title: "PRESENT",
-                  count: "6",
-                  color: Color(0xff169A45),
+                  count: provider.attendance?.present.toString() ?? "0",
+                  color: const Color(0xff169A45),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: AttendanceBox(
                   title: "ABSENT",
-                  count: "5",
-                  color: Color(0xffE53935),
+                  count: provider.attendance?.absent.toString() ?? "0",
+                  color: const Color(0xffE53935),
                 ),
               ),
             ],
@@ -59,20 +62,20 @@ class AttendanceCard extends StatelessWidget {
           const SizedBox(height: 12),
 
           Row(
-            children: const [
+            children: [
               Expanded(
                 child: AttendanceBox(
                   title: "LATE IN",
-                  count: "5",
-                  color: Color(0xffF39C12),
+                  count: provider.attendance?.lateIn.toString() ?? "0",
+                  color: const Color(0xffF39C12),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: AttendanceBox(
                   title: "LATE OUT",
-                  count: "3",
-                  color: Color(0xff2D5BE3),
+                  count: provider.attendance?.lateOut.toString() ?? "0",
+                  color: const Color(0xff2D5BE3),
                 ),
               ),
             ],
@@ -101,43 +104,40 @@ class AttendanceBox extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       onTap: () {},
       child: Container(
-  height: 120,
-  padding: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: color,
-    borderRadius: BorderRadius.circular(12),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Text(
-        title,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
+        height: 120,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(12),
         ),
-      ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
 
-      Text(
-        count,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 34,
-        ),
-      ),
+            Text(
+              count,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 34,
+              ),
+            ),
 
-      const Text(
-        "Tap for details",
-        style: TextStyle(
-          color: Colors.white70,
-          fontSize: 12,
+            const Text(
+              "Tap for details",
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+            ),
+          ],
         ),
       ),
-    ],
-  ),
-),
     );
   }
 }
