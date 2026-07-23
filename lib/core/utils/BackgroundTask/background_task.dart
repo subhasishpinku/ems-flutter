@@ -294,7 +294,7 @@ void onStart(ServiceInstance service) async {
   service.on("stopService").listen((event) {
     service.stopSelf();
   });
-  Timer.periodic(const Duration(minutes: 1), (timer) async {
+  Timer.periodic(const Duration(minutes: 30), (timer) async {
     print("1 minute timer fireds");
 
     try {
@@ -316,10 +316,10 @@ void onStart(ServiceInstance service) async {
         position.longitude,
       );
 
-      // await LocationService().createLocation(
-      //   latitude: position.latitude,
-      //   longitude: position.longitude,
-      // );
+      await LocationService().createLocation(
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
       // final countdown = CountdownTimer();
 
       // countdown.start(() async {
@@ -337,18 +337,18 @@ void onStart(ServiceInstance service) async {
       //   print("Location sent after 30 minutes");
       // });
 
-      Timer.periodic(const Duration(minutes: 10), (timer) async {
-        final position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-        );
+      // Timer.periodic(const Duration(minutes: 10), (timer) async {
+      //   final position = await Geolocator.getCurrentPosition(
+      //     desiredAccuracy: LocationAccuracy.high,
+      //   );
 
-        await LocationService().createLocation(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
+      //   await LocationService().createLocation(
+      //     latitude: position.latitude,
+      //     longitude: position.longitude,
+      //   );
 
-        print("Location sent");
-      });
+      //   print("Location sent");
+      // });
 
       String address = "Unknown";
 

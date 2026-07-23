@@ -105,4 +105,9 @@ class ApiEndpoints {
 
   // ================= EMPLOYEE LOCATION =================
   static const String employeeLocationCreate = "employee_location/create.php";
+  static const String docketNetworks = "docket/metadata.php?action=networks";
+  static const String docketMetadata =
+      "docket/metadata.php?action=connection_types";
+  static const String docketTeamLeaders =
+      "docket/metadata.php?action=team_leaders";
 }

@@ -1,4 +1,6 @@
+import 'package:ems/Docket/provider/docket_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class DocketCreate extends StatefulWidget {
   const DocketCreate({super.key});
@@ -44,11 +46,18 @@ class _DocketCreateState extends State<DocketCreate>
   final requestController = TextEditingController();
   final contactController = TextEditingController();
   final remarksController = TextEditingController();
-
+  bool showDetails = false;
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    Future.microtask(() {
+      final provider = context.read<DocketProvider>();
+
+      provider.loadNetworks();
+      provider.loadConnectionTypes();
+      provider.loadTeamLeaders();
+    });
   }
 
   @override
@@ -81,10 +90,7 @@ class _DocketCreateState extends State<DocketCreate>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildForm(),
-          const Center(child: Text("Maintenance")),
-        ],
+        children: [_buildForm(), _buildForm1()],
       ),
     );
   }
@@ -99,13 +105,14 @@ class _DocketCreateState extends State<DocketCreate>
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              // _label("NETWORK"),
+              // _dropdown(
+              //   value: network,
+              //   items: networks,
+              //   onChanged: (v) => setState(() => network = v!),
+              // ),
               _label("NETWORK"),
-              _dropdown(
-                value: network,
-                items: networks,
-                onChanged: (v) => setState(() => network = v!),
-              ),
-
+              _buildNetworkDropdown(),
               const SizedBox(height: 16),
 
               Row(
@@ -114,11 +121,12 @@ class _DocketCreateState extends State<DocketCreate>
                     child: Column(
                       children: [
                         _label("CONNECTION TYPE"),
-                        _dropdown(
-                          value: connection,
-                          items: connectionTypes,
-                          onChanged: (v) => setState(() => connection = v!),
-                        ),
+                        // _dropdown(
+                        //   value: connection,
+                        //   items: connectionTypes,
+                        //   onChanged: (v) => setState(() => connection = v!),
+                        // ),
+                        _buildConnectionDropdown(),
                       ],
                     ),
                   ),
@@ -127,10 +135,20 @@ class _DocketCreateState extends State<DocketCreate>
                     child: Column(
                       children: [
                         _label("CIRCUIT ID"),
-                        _textField(
-                          controller: circuitController,
-                          hint: "Circuit ID",
+                        Consumer<DocketProvider>(
+                          builder: (context, provider, child) {
+                            circuitController.text = provider.circuitId;
+
+                            return _textField(
+                              controller: circuitController,
+                              hint: "Circuit ID",
+                            );
+                          },
                         ),
+                        // _textField(
+                        //   controller: circuitController,
+                        //   hint: "Circuit ID",
+                        // ),
                       ],
                     ),
                   ),
@@ -143,7 +161,16 @@ class _DocketCreateState extends State<DocketCreate>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: IconButton(
-                      onPressed: () {},
+                      onPressed: () async {
+                        final provider = context.read<DocketProvider>();
+
+                        // যদি circuit detail API call করতে হয়
+                        await provider.loadCircuitDetail();
+
+                        setState(() {
+                          showDetails = true;
+                        });
+                      },
                       icon: const Icon(Icons.search, color: Colors.white),
                     ),
                   ),
@@ -194,12 +221,11 @@ class _DocketCreateState extends State<DocketCreate>
               const SizedBox(height: 16),
 
               _label("PROBLEM"),
-              _dropdown(
-                value: problem,
-                items: problems,
-                onChanged: (v) => setState(() => problem = v!),
-              ),
-
+              _buildProblemDropdown(), // _dropdown(
+              //   value: problem,
+              //   items: problems,
+              //   onChanged: (v) => setState(() => problem = v!),
+              // ),
               const SizedBox(height: 16),
 
               Row(
@@ -208,11 +234,12 @@ class _DocketCreateState extends State<DocketCreate>
                     child: Column(
                       children: [
                         _label("TEAM LEADER"),
-                        _dropdown(
-                          value: leader,
-                          items: leaders,
-                          onChanged: (v) => setState(() => leader = v!),
-                        ),
+                        _buildTeamLeaderDropdown(),
+                        // _dropdown(
+                        //   value: leader,
+                        //   items: leaders,
+                        //   onChanged: (v) => setState(() => leader = v!),
+                        // ),
                       ],
                     ),
                   ),
@@ -256,15 +283,133 @@ class _DocketCreateState extends State<DocketCreate>
                       ),
                     ),
                     onPressed: () {},
-                    child: const Text(
-                      "Create",
-                      style: TextStyle(color: Colors.white),
+                    child: Row(
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            // Create
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                          ),
+                          child: const Text(
+                            "Create",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+
+                        const SizedBox(width: 10),
+
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              showDetails = !showDetails;
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: showDetails
+                                ? Colors.red
+                                : Colors.blue,
+                          ),
+                          child: Text(
+                            showDetails ? "Hide Details" : "Detail",
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForm1() {
+    return Column(
+      children: [
+        _buildSectionCard(
+          title: "Docket Type",
+          child: Wrap(
+            spacing: 20,
+            runSpacing: 15,
+            children: [
+              _buildTextField("Connection Type"),
+              _buildTextField("Area"),
+              _buildTextField("Circuit ID"),
+              _buildTextField("Status"),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        _buildSectionCard(
+          title: "Location A",
+          child: Wrap(
+            spacing: 20,
+            runSpacing: 15,
+            children: [
+              _buildTextField("Location A"),
+              _buildTextField("Mobile"),
+              _buildTextField("Address Line A", width: 450),
+              _buildTextField("Pin"),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        _buildSectionCard(
+          title: "Location B",
+          child: Wrap(
+            spacing: 20,
+            runSpacing: 15,
+            children: [
+              _buildTextField("Network Name", width: 450),
+              _buildTextField("Mobile"),
+              _buildTextField("Address Line B"),
+              _buildTextField("Pin"),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        _buildSectionCard(
+          title: "Contact",
+          child: Wrap(
+            spacing: 20,
+            runSpacing: 15,
+            children: [
+              _buildTextField("Customer Name", width: 450),
+              _buildTextField("Customer Contact", width: 450),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard({required String title, required Widget child}) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            child,
+          ],
         ),
       ),
     );
@@ -308,6 +453,108 @@ class _DocketCreateState extends State<DocketCreate>
     );
   }
 
+  Widget _buildConnectionDropdown() {
+    return Consumer<DocketProvider>(
+      builder: (context, provider, child) {
+        return DropdownButtonFormField<String>(
+          value: provider.selectedConnection,
+          hint: const Text("Select Connection"),
+          isExpanded: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          items: provider.connectionTypes.map((item) {
+            return DropdownMenuItem(value: item.value, child: Text(item.label));
+          }).toList(),
+          onChanged: provider.changeConnection,
+        );
+      },
+    );
+  }
+
+  Widget _buildNetworkDropdown() {
+    return SizedBox(
+      width: 220,
+      child: Consumer<DocketProvider>(
+        builder: (context, provider, child) {
+          if (provider.loading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return DropdownButtonFormField<String>(
+            value: provider.selectedNetwork,
+            isExpanded: true,
+            hint: const Text("Select Network"),
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 14,
+              ),
+            ),
+            items: provider.networks.map((network) {
+              return DropdownMenuItem<String>(
+                value: network.value,
+                child: Text(network.label),
+              );
+            }).toList(),
+            onChanged: provider.changeNetwork,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProblemDropdown() {
+    return Consumer<DocketProvider>(
+      builder: (context, provider, child) {
+        return DropdownButtonFormField<String>(
+          value: provider.selectedProblem,
+          hint: const Text("Select Problem"),
+          isExpanded: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 14,
+            ),
+          ),
+          items: provider.problems.map((problem) {
+            return DropdownMenuItem<String>(
+              value: problem.value,
+              child: Text(problem.label),
+            );
+          }).toList(),
+          onChanged: provider.changeProblem,
+        );
+      },
+    );
+  }
+
+  Widget _buildTeamLeaderDropdown() {
+    return Consumer<DocketProvider>(
+      builder: (context, provider, child) {
+        return DropdownButtonFormField<String>(
+          value: provider.selectedTeamLeader,
+          hint: const Text("Select Team Leader"),
+          isExpanded: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          items: provider.teamLeaders.map((leader) {
+            return DropdownMenuItem<String>(
+              value: leader.value,
+              child: Text(leader.label),
+            );
+          }).toList(),
+          onChanged: provider.changeTeamLeader,
+        );
+      },
+    );
+  }
+
   Widget _dropdown({
     required String value,
     required List<String> items,
@@ -330,6 +577,47 @@ class _DocketCreateState extends State<DocketCreate>
         );
       }).toList(),
       onChanged: onChanged,
+    );
+  }
+
+  Widget _buildTextField(String hint, {double width = 220}) {
+    return SizedBox(
+      width: width,
+      child: TextFormField(
+        decoration: InputDecoration(
+          hintText: hint,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown(String hint) {
+    return SizedBox(
+      width: 220,
+      child: DropdownButtonFormField<String>(
+        value: "-- Select one --",
+        decoration: InputDecoration(
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 14,
+          ),
+        ),
+        items: const [
+          DropdownMenuItem(
+            value: "-- Select one --",
+            child: Text("-- Select one --"),
+          ),
+          DropdownMenuItem(value: "Option 1", child: Text("Option 1")),
+          DropdownMenuItem(value: "Option 2", child: Text("Option 2")),
+        ],
+        onChanged: (value) {},
+      ),
     );
   }
 }

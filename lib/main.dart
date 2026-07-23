@@ -1,3 +1,4 @@
+import 'package:ems/Docket/provider/docket_provider.dart';
 import 'package:ems/Dvr/provider/dvr_provider.dart';
 import 'package:ems/LeaveApplication/providers/leave_provider.dart';
 import 'package:ems/core/providers/locationProvider.dart';
@@ -54,6 +55,7 @@ Future<void> main() async {
         ChangeNotifierProvider(create: (_) => HomeProvider()),
         ChangeNotifierProvider(create: (_) => LeaveProvider()..loadEmployees()),
         ChangeNotifierProvider(create: (_) => DvrProvider()),
+        ChangeNotifierProvider(create: (_) => DocketProvider()),
       ],
       child: const MyApp(),
     ),

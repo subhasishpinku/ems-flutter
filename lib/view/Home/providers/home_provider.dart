@@ -120,7 +120,7 @@ class HomeProvider extends ChangeNotifier {
     // _locationTimer = Timer.periodic(const Duration(seconds: 10), (timer) async {
     //   await fetchLocation();
     // });
-    _locationTimer = Timer.periodic(const Duration(minutes: 1), (timer) async {
+    _locationTimer = Timer.periodic(const Duration(minutes: 30), (timer) async {
       print("1 minute timer fired");
       await fetchLocation();
     });
