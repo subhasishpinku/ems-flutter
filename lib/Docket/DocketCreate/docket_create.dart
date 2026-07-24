@@ -57,6 +57,7 @@ class _DocketCreateState extends State<DocketCreate>
       provider.loadNetworks();
       provider.loadConnectionTypes();
       provider.loadTeamLeaders();
+      provider.loadTechnicians();
     });
   }
 
@@ -90,7 +91,7 @@ class _DocketCreateState extends State<DocketCreate>
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [_buildForm(), _buildForm1()],
+        children: [_buildForm(), _buildMaintenanceForm()],
       ),
     );
   }
@@ -164,7 +165,6 @@ class _DocketCreateState extends State<DocketCreate>
                       onPressed: () async {
                         final provider = context.read<DocketProvider>();
 
-                        // যদি circuit detail API call করতে হয়
                         await provider.loadCircuitDetail();
 
                         setState(() {
@@ -178,7 +178,11 @@ class _DocketCreateState extends State<DocketCreate>
               ),
 
               const SizedBox(height: 20),
-
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: showDetails ? _buildForm1() : const SizedBox.shrink(),
+              ),
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -248,11 +252,14 @@ class _DocketCreateState extends State<DocketCreate>
                     child: Column(
                       children: [
                         _label("TECHNICIAN"),
-                        _dropdown(
-                          value: technician,
-                          items: technicians,
-                          onChanged: (v) => setState(() => technician = v!),
-                        ),
+                        _label("TECHNICIAN"),
+                        _buildTechnicianDropdown(),
+                        // _dropdown(value: technician, items: technicians),
+                        // _dropdown(
+                        //   value: technician,
+                        //   items: technicians,
+                        //   onChanged: (v) => setState(() => technician = v!),
+                        // ),
                       ],
                     ),
                   ),
@@ -272,53 +279,60 @@ class _DocketCreateState extends State<DocketCreate>
 
               Align(
                 alignment: Alignment.centerLeft,
-                child: SizedBox(
-                  height: 42,
-                  width: 100,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 10,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () async {
+                        final provider = context.read<DocketProvider>();
+
+                        final response = await provider.createDocket(
+                          requestBy: requestController.text,
+                          contactNo: contactController.text,
+                          remarks: remarksController.text,
+                        );
+
+                        if (!context.mounted) return;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              response["message"] ?? "Something went wrong",
+                            ),
+                            backgroundColor: response["status"] == "success"
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        );
+
+                        if (response["status"] == "success") {
+                          // চাইলে form clear করতে পারো
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: const Text(
+                        "Create",
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
-                    onPressed: () {},
-                    child: Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: () {
-                            // Create
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                          ),
-                          child: const Text(
-                            "Create",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-
-                        const SizedBox(width: 10),
-
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              showDetails = !showDetails;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: showDetails
-                                ? Colors.red
-                                : Colors.blue,
-                          ),
-                          child: Text(
-                            showDetails ? "Hide Details" : "Detail",
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          showDetails = !showDetails;
+                        });
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: showDetails ? Colors.red : Colors.blue,
+                      ),
+                      child: Text(
+                        showDetails ? "Hide Details" : "Details",
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],
@@ -329,68 +343,102 @@ class _DocketCreateState extends State<DocketCreate>
   }
 
   Widget _buildForm1() {
-    return Column(
-      children: [
-        _buildSectionCard(
-          title: "Docket Type",
-          child: Wrap(
-            spacing: 20,
-            runSpacing: 15,
-            children: [
-              _buildTextField("Connection Type"),
-              _buildTextField("Area"),
-              _buildTextField("Circuit ID"),
-              _buildTextField("Status"),
-            ],
-          ),
-        ),
+    return Consumer<DocketProvider>(
+      builder: (context, provider, child) {
+        final detail = provider.circuitDetail;
 
-        const SizedBox(height: 15),
+        if (detail == null) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Text("No data found", style: TextStyle(fontSize: 16)),
+            ),
+          );
+        }
 
-        _buildSectionCard(
-          title: "Location A",
-          child: Wrap(
-            spacing: 20,
-            runSpacing: 15,
-            children: [
-              _buildTextField("Location A"),
-              _buildTextField("Mobile"),
-              _buildTextField("Address Line A", width: 450),
-              _buildTextField("Pin"),
-            ],
-          ),
-        ),
+        return Column(
+          children: [
+            _buildSectionCard(
+              title: "Docket Type",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  _buildTextField(
+                    "Connection Type",
+                    detail.connectionType ?? "",
+                  ),
+                  _buildTextField("Area", detail.hirerName ?? ""),
+                  _buildTextField("Circuit ID", detail.circuitId ?? ""),
+                  _buildTextField("Status", detail.status ?? ""),
+                ],
+              ),
+            ),
 
-        const SizedBox(height: 15),
+            const SizedBox(height: 15),
 
-        _buildSectionCard(
-          title: "Location B",
-          child: Wrap(
-            spacing: 20,
-            runSpacing: 15,
-            children: [
-              _buildTextField("Network Name", width: 450),
-              _buildTextField("Mobile"),
-              _buildTextField("Address Line B"),
-              _buildTextField("Pin"),
-            ],
-          ),
-        ),
+            _buildSectionCard(
+              title: "Location A",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  _buildTextField("Location A", detail.locationA ?? ""),
+                  _buildTextField("Mobile", detail.mobileA ?? ""),
+                  _buildTextField(
+                    "Address Line A",
+                    detail.addressA ?? "",
+                    width: 450,
+                  ),
+                  _buildTextField("Pin", detail.pinA ?? ""),
+                ],
+              ),
+            ),
 
-        const SizedBox(height: 15),
+            const SizedBox(height: 15),
 
-        _buildSectionCard(
-          title: "Contact",
-          child: Wrap(
-            spacing: 20,
-            runSpacing: 15,
-            children: [
-              _buildTextField("Customer Name", width: 450),
-              _buildTextField("Customer Contact", width: 450),
-            ],
-          ),
-        ),
-      ],
+            _buildSectionCard(
+              title: "Location B",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  _buildTextField("Location B", detail.locationB ?? ""),
+                  _buildTextField("Mobile", detail.mobileB ?? ""),
+                  _buildTextField(
+                    "Address Line B",
+                    detail.addressB ?? "",
+                    width: 450,
+                  ),
+                  _buildTextField("Pin", detail.pinB ?? ""),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 15),
+
+            _buildSectionCard(
+              title: "Contact",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  _buildTextField(
+                    "Customer Name",
+                    detail.customerName ?? "",
+                    width: 450,
+                  ),
+                  _buildTextField(
+                    "Customer Contact",
+                    detail.customerContact ?? "",
+                    width: 450,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -467,6 +515,25 @@ class _DocketCreateState extends State<DocketCreate>
             return DropdownMenuItem(value: item.value, child: Text(item.label));
           }).toList(),
           onChanged: provider.changeConnection,
+        );
+      },
+    );
+  }
+
+  Widget _buildTechnicianDropdown() {
+    return Consumer<DocketProvider>(
+      builder: (context, provider, child) {
+        return DropdownButtonFormField<String>(
+          value: provider.selectedTechnician,
+          hint: const Text("Select Technician"),
+          isExpanded: true,
+          decoration: InputDecoration(
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          items: provider.technicians.map((tech) {
+            return DropdownMenuItem(value: tech.value, child: Text(tech.label));
+          }).toList(),
+          onChanged: provider.changeTechnician,
         );
       },
     );
@@ -580,12 +647,14 @@ class _DocketCreateState extends State<DocketCreate>
     );
   }
 
-  Widget _buildTextField(String hint, {double width = 220}) {
+  Widget _buildTextField(String label, String value, {double width = 220}) {
     return SizedBox(
       width: width,
       child: TextFormField(
+        initialValue: value,
+        readOnly: true,
         decoration: InputDecoration(
-          hintText: hint,
+          labelText: label,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
@@ -618,6 +687,350 @@ class _DocketCreateState extends State<DocketCreate>
         ],
         onChanged: (value) {},
       ),
+    );
+  }
+
+  Widget _buildMaintenanceForm() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Card(
+        elevation: 2,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              const SizedBox(height: 10),
+
+              _label("NETWORK"),
+              _buildNetworkDropdown(),
+
+              const SizedBox(height: 16),
+
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _label("CONNECTION TYPE"),
+                        _buildConnectionDropdown(),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 12),
+
+                  Expanded(
+                    child: Column(
+                      children: [
+                        _label("CIRCUIT ID"),
+
+                        Consumer<DocketProvider>(
+                          builder: (context, provider, child) {
+                            circuitController.text = provider.circuitId;
+
+                            return _textField(
+                              controller: circuitController,
+                              hint: "Circuit ID",
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  Container(
+                    height: 50,
+                    width: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.search, color: Colors.white),
+                      onPressed: () async {
+                        final provider = context.read<DocketProvider>();
+
+                        await provider.loadCircuitDetail();
+
+                        setState(() {
+                          showDetails = true;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              AnimatedSize(
+                duration: const Duration(milliseconds: 300),
+                child: showDetails
+                    ? _buildMaintenanceDetails()
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMaintenanceDetails() {
+    return Consumer<DocketProvider>(
+      builder: (context, provider, child) {
+        final detail = provider.circuitDetail;
+
+        if (detail == null) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Text("No data found"),
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            // Docket Type
+            _buildSectionCard(
+              title: "Docket Type",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  SizedBox(
+                    width: 220,
+                    child: Column(
+                      children: [
+                        _label("CONNECTION TYPE"),
+                        _buildConnectionDropdown(),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(
+                    width: 220,
+                    child: Column(
+                      children: [
+                        _label("CIRCUIT ID"),
+                        _textField(
+                          controller: circuitController,
+                          hint: "Circuit ID",
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(
+                    width: 220,
+                    child: Column(
+                      children: [
+                        _label("STATUS"),
+                        _dropdown(
+                          value: "-- Select one --",
+                          items: const [
+                            "-- Select one --",
+                            "Open",
+                            "Pending",
+                            "Closed",
+                          ],
+                          onChanged: (v) {},
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Location A
+            _buildSectionCard(
+              title: "Location A",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  _buildTextField("Location A", detail.locationA ?? ""),
+                  _buildTextField("Mobile", detail.mobileA ?? ""),
+                  _buildTextField(
+                    "Address Line A",
+                    detail.addressA ?? "",
+                    width: 320,
+                  ),
+                  _buildTextField("Pin", detail.pinA ?? ""),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Network Details
+            _buildSectionCard(
+              title: "Network Details",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  _buildTextField("Network Name", detail.locationB ?? ""),
+                  _buildTextField("Mobile", detail.mobileB ?? ""),
+                  _buildTextField(
+                    "Address Line",
+                    detail.addressB ?? "",
+                    width: 320,
+                  ),
+                  _buildTextField("Pin", detail.pinB ?? ""),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Contact
+            _buildSectionCard(
+              title: "Contact",
+              child: Wrap(
+                spacing: 20,
+                runSpacing: 15,
+                children: [
+                  _buildTextField(
+                    "Customer Name",
+                    detail.customerName ?? "",
+                    width: 320,
+                  ),
+                  _buildTextField(
+                    "Customer Contact",
+                    detail.customerContact ?? "",
+                    width: 320,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Docket Creation Details
+            _buildSectionCard(
+              title: "Docket creation details",
+              child: Column(
+                children: [
+                  Wrap(
+                    spacing: 20,
+                    runSpacing: 15,
+                    children: [
+                      SizedBox(
+                        width: 220,
+                        child: Column(
+                          children: [
+                            _label("REQUEST BY"),
+                            _textField(
+                              controller: requestController,
+                              hint: "Request By",
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(
+                        width: 220,
+                        child: Column(
+                          children: [
+                            _label("CONTACT NO"),
+                            _textField(
+                              controller: contactController,
+                              hint: "Contact No",
+                              keyboardType: TextInputType.phone,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(
+                        width: 220,
+                        child: Column(
+                          children: [
+                            _label("PROBLEM"),
+                            _buildProblemDropdown(),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(
+                        width: 220,
+                        child: Column(
+                          children: [
+                            _label("TEAM LEADER"),
+                            _buildTeamLeaderDropdown(),
+                          ],
+                        ),
+                      ),
+
+                      SizedBox(
+                        width: 220,
+                        child: Column(
+                          children: [
+                            _label("TECHNICIAN"),
+                            _buildTechnicianDropdown(),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  _label("REMARKS"),
+                  _textField(
+                    controller: remarksController,
+                    hint: "Remarks",
+                    maxLines: 2,
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        final provider = context.read<DocketProvider>();
+
+                        final response = await provider.createDocket(
+                          requestBy: requestController.text,
+                          contactNo: contactController.text,
+                          remarks: remarksController.text,
+                        );
+
+                        if (!context.mounted) return;
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(response["message"]),
+                            backgroundColor: response["status"] == "success"
+                                ? Colors.green
+                                : Colors.red,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                      ),
+                      child: const Text(
+                        "Create",
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

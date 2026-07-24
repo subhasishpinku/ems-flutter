@@ -1,8 +1,10 @@
 import 'package:ems/Docket/model/circuit_detail_model.dart';
 import 'package:ems/Docket/model/connection_type_model.dart';
+import 'package:ems/Docket/model/docket_create_request.dart';
 import 'package:ems/Docket/model/network_model.dart';
 import 'package:ems/Docket/model/problem_model.dart';
 import 'package:ems/Docket/model/team_leader_model.dart';
+import 'package:ems/Docket/model/technician_model.dart';
 import 'package:ems/core/services/docket_service.dart';
 import 'package:flutter/material.dart';
 
@@ -11,7 +13,8 @@ class DocketProvider extends ChangeNotifier {
   List<ConnectionTypeModel> connectionTypes = [];
   String? selectedConnection;
   bool loading = false;
-
+  List<TechnicianModel> technicians = [];
+  String? selectedTechnician;
   List<NetworkModel> networks = [];
 
   String? selectedNetwork;
@@ -120,4 +123,30 @@ class DocketProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  Future<void> loadTechnicians() async {
+    technicians = await _service.getTechnicians();
+    notifyListeners();
+  }
+
+  void changeTechnician(String? value) {
+    selectedTechnician = value;
+    notifyListeners();
+  }
+  Future<Map<String, dynamic>> createDocket({
+  required String requestBy,
+  required String contactNo,
+  required String remarks,
+}) async {
+  return await _service.createDocket(
+    type: "normal",
+    circuitId: circuitId,
+    requestBy: requestBy,
+    contactNo: contactNo,
+    problem: selectedProblem ?? "",
+    teamLeader: selectedTeamLeader ?? "",
+    remarks: remarks,
+    technician: selectedTechnician ?? "",
+  );
+}
 }

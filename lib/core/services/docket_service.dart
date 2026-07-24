@@ -1,9 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:ems/Docket/model/circuit_detail_model.dart';
 import 'package:ems/Docket/model/connection_type_model.dart';
+import 'package:ems/Docket/model/docket_create_request.dart';
 import 'package:ems/Docket/model/network_model.dart';
 import 'package:ems/Docket/model/problem_model.dart';
 import 'package:ems/Docket/model/team_leader_model.dart';
+import 'package:ems/Docket/model/technician_model.dart';
 import 'package:ems/core/network/api_client.dart';
 import 'package:ems/core/network/api_endpoints.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -162,4 +164,72 @@ class DocketService {
 
     return null;
   }
+
+  Future<List<TechnicianModel>> getTechnicians() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token") ?? "";
+
+    final response = await ApiClient.dio.get(
+      ApiEndpoints.docketTechnicians,
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      ),
+    );
+
+    if (response.statusCode == 200 && response.data["status"] == "success") {
+      return (response.data["data"]["items"] as List)
+          .map((e) => TechnicianModel.fromJson(e))
+          .toList();
+    }
+
+    return [];
+  }
+Future<Map<String, dynamic>> createDocket({
+  required String type,
+  required String circuitId,
+  required String requestBy,
+  required String contactNo,
+  required String problem,
+  required String teamLeader,
+  required String remarks,
+  required String technician,
+}) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString("token") ?? "";
+
+  try {
+    final response = await ApiClient.dio.post(
+      ApiEndpoints.docketCreate,
+      data: {
+        "type": type,
+        "circuit_id": circuitId,
+        "requestby": requestBy,
+        "contactno": contactNo,
+        "problem": problem,
+        "teamleader": teamLeader,
+        "remarks": remarks,
+        "technician": technician,
+      },
+      options: Options(
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      ),
+    );
+
+    return response.data;
+  } on DioException catch (e) {
+    if (e.response != null) {
+      return e.response!.data;
+    }
+
+    return {
+      "status": "error",
+      "message": "Network Error",
+    };
+  }}
 }

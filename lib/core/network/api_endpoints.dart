@@ -110,4 +110,7 @@ class ApiEndpoints {
       "docket/metadata.php?action=connection_types";
   static const String docketTeamLeaders =
       "docket/metadata.php?action=team_leaders";
+  static const String docketTechnicians =
+      "docket/metadata.php?action=technicians";
+  static const String docketCreate = "docket/create.php";
 }
